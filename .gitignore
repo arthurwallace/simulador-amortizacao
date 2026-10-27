@@ -1,0 +1,9 @@
+# Temporary extracts and original dump archive
+extracted/
+*.zip
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

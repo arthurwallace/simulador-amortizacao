@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Amortização | Tabela SAC e Price com Amortizações Extras</title>
+  <meta name="description" content="Simule financiamentos imobiliários nas tabelas SAC e Price. Calcule amortizações extras por prazo ou parcela, compare cenários e descubra quanto tempo e dinheiro você pode economizar.">
+  <meta name="keywords" content="simulador de amortizacao, tabela sac, tabela price, amortizacao extra, financiamento imobiliario, caixa, antecipar parcelas, economia juros">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Modern Web Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Sticky Navigation Bar -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="#" class="brand-link" id="brandLink">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <span>Simulador de <span class="highlight">Amortização</span></span>
+          <span class="brand-subtitle">Tabela SAC & Price • Sem Cadastro</span>
+        </div>
+      </a>
+
+      <div class="header-actions">
+        <div class="api-badge" id="apiStatusBadge">
+          <span class="pulse-dot"></span>
+          <span>Conectando...</span>
+        </div>
+
+        <button class="btn btn-secondary btn-sm" onclick="openScenariosModal()" id="btnOpenScenarios" title="Gerenciar cenários salvos">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Meus Cenários</span>
+        </button>
+
+        <button class="btn btn-secondary btn-sm" onclick="printReport()" id="btnPrintTop" title="Imprimir relatório completo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <span>Imprimir / PDF</span>
+        </button>
+
+        <button class="btn btn-icon btn-ghost" id="btnThemeToggle" title="Alternar tema claro/escuro">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- Page Intro Header -->
+    <section class="page-hero">
+      <h1 class="hero-title">Simulador de <span>Amortização</span> de Financiamento</h1>
+      <p class="hero-desc">
+        Descubra o impacto real de fazer <b>amortizações extras</b> no seu financiamento imobiliário. Calcule a economia exata de juros, redução de anos de dívida e compare os sistemas <b>SAC e Price</b> com controle total de taxas e correção monetária.
+      </p>
+    </section>
+
+    <!-- SECTION 1: DADOS DO FINANCIAMENTO -->
+    <section class="card-panel" id="sectionInputs">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+          Parâmetros do Financiamento
+        </h2>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="saveNewScenarioPrompt()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path></svg>
+            Salvar Cenário
+          </button>
+        </div>
+      </div>
+
+      <form id="simulationForm">
+        <div class="form-grid">
+          <!-- Valor do Empréstimo -->
+          <div class="input-field">
+            <label class="input-label" for="loanAmount">
+              Valor Financiado <span class="req">*</span>
+            </label>
+            <input type="text" id="loanAmount" class="input-control" required placeholder="R$ 228.000,00" inputmode="numeric">
+          </div>
+
+          <!-- Data de Início -->
+          <div class="input-field">
+            <label class="input-label" for="date">
+              Data de Início <span class="req">*</span>
+            </label>
+            <input type="date" id="date" class="input-control" required value="2025-02-26">
+          </div>
+
+          <!-- Sistema de Amortização -->
+          <div class="input-field">
+            <label class="input-label" for="amortizationSystemType">
+              Sistema de Amortização <span class="req">*</span>
+            </label>
+            <select id="amortizationSystemType" class="input-control" required>
+              <option value="0">Tabela SAC (parcelas decrescentes)</option>
+              <option value="1">Tabela Price (parcelas fixas)</option>
+            </select>
+          </div>
+
+          <!-- Taxa de Juros com seletor anual/mensal -->
+          <div class="input-field">
+            <label class="input-label" for="interestRate">
+              Taxa de Juros <span class="req">*</span>
+            </label>
+            <div class="input-with-select">
+              <input type="number" step="0.01" min="0" max="800" id="interestRate" class="input-control" required value="12.19" placeholder="12.19">
+              <select id="interestRateType" class="input-control">
+                <option value="0">a.a. (anual)</option>
+                <option value="1">a.m. (mensal)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quantidade de Parcelas -->
+          <div class="input-field">
+            <label class="input-label" for="numberOfInstallments">
+              Quantidade de Parcelas <span class="req">*</span>
+            </label>
+            <input type="number" min="1" max="600" id="numberOfInstallments" class="input-control" required value="420" placeholder="420">
+          </div>
+        </div>
+
+        <div class="form-actions-bar">
+          <div class="privacy-note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Sem necessidade de telefone ou e-mail. Seus dados ficam salvos localmente com 100% de privacidade.</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSimulate">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>Calcular Simulação</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- SECTION 2: PLANO DE AMORTIZAÇÃO E ENCARGOS -->
+    <section class="card-panel" id="sectionPlans">
+      <div class="panel-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <h2 class="panel-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            Estratégia de Amortizações & Encargos
+          </h2>
+          <span class="api-badge" id="plansCountBadge">0 planos</span>
+        </div>
+
+        <div class="plan-actions-group">
+          <button type="button" class="btn btn-success btn-sm" onclick="openAmortizationModal()" id="btnAddAmort">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            + Amortização Extra
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openFeeModal()" id="btnAddFee">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            + Taxa / Seguro
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openCorrectionModal()" id="btnAddCorr">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            + Correção (TR)
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="restoreDefaultScenario()" title="Restaurar simulação de 16 planos">
+            Restaurar Padrão
+          </button>
+          <button type="button" class="btn btn-danger-ghost btn-sm" onclick="clearAllPlans()" title="Limpar todos os planos">
+            Limpar
+          </button>
+        </div>
+      </div>
+
+      <div class="plans-list" id="plansListContainer">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- SECTION 3: HERO ACHIEVEMENT BANNER -->
+    <section class="hero-achievement" id="achievementHero" style="display: none;">
+      <!-- Dynamic banner filled by app.js -->
+    </section>
+
+    <!-- SECTION 4: COMPARATIVO LADO A LADO -->
+    <section class="comparison-grid" id="comparisonContainer">
+      <!-- Side by Side cards filled by app.js -->
+    </section>
+
+    <!-- SECTION 5: GRÁFICOS VISUAIS -->
+    <section class="charts-grid">
+      <!-- Chart 1: Curva de Saldo Devedor -->
+      <div class="chart-card">
+        <div class="chart-title">
+          <span>Evolução do Saldo Devedor</span>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-dot" style="background-color: #94a3b8;"></span> Sem Amortização</div>
+            <div class="legend-item"><span class="legend-dot" style="background-color: #10b981;"></span> Com Amortização</div>
+          </div>
+        </div>
+        <div class="svg-chart-container" id="balanceChartContainer">
+          <!-- SVG chart rendered here -->
+        </div>
+      </div>
+
+      <!-- Chart 2: Composição Financeira -->
+      <div class="chart-card">
+        <div class="chart-title">
+          <span>Para Onde Vai o Seu Dinheiro</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Com Antecipação</span>
+        </div>
+        <div class="svg-chart-container" id="costChartContainer">
+          <!-- Donut chart rendered here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: TABELA DETALHADA DAS PARCELAS -->
+    <section class="card-panel" id="sectionTable">
+      <div class="table-tabs-header">
+        <div class="tab-nav">
+          <button type="button" class="tab-btn active" id="tabWithAmort" onclick="switchTableTab('withAmort')">
+            Com Amortizações Extras
+          </button>
+          <button type="button" class="tab-btn" id="tabWithoutAmort" onclick="switchTableTab('withoutAmort')">
+            Sem Amortizações Extras
+          </button>
+        </div>
+
+        <div class="table-filter-bar">
+          <input type="text" class="input-control search-input" placeholder="Buscar parcela..." oninput="onTableSearchInput(event)">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="exportTableToCSV()" title="Baixar tabela em arquivo Excel/CSV">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Exportar CSV
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="printReport()" title="Imprimir tabela">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Imprimir
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Data</th>
+              <th>Prestação</th>
+              <th>Amortização</th>
+              <th>Juros</th>
+              <th>Taxa/Seguro</th>
+              <th>Correção</th>
+              <th>Amort. Extra</th>
+              <th>Saldo Devedor</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-footer">
+        <div id="tableTotalCount">0 parcelas registradas</div>
+        <div class="pagination-controls" id="paginationControls">
+          <!-- Pagination buttons rendered by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: GUIA EDUCATIVO SAC VS PRICE -->
+    <section class="card-panel" id="sectionEducation">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Guia Prático: Tabela SAC x Tabela Price
+        </h2>
+      </div>
+
+      <details class="accordion-item" open>
+        <summary class="accordion-summary">
+          <span>Qual a diferença entre Tabela SAC e Tabela Price?</span>
+          <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="accordion-body">
+          <p>
+            No <b>Sistema de Amortização Constante (SAC)</b>, a cota de amortização da dívida é idêntica todos os meses. Como o saldo devedor cai rápido, o valor cobrado de juros diminui a cada prestação, resultando em <b>parcelas decrescentes</b> ao longo do tempo.
+          </p>
+          <p style="margin-top: 0.5rem;">
+            Na <b>Tabela Price</b>, o valor total da parcela mensal é constante (fixo) do início ao fim. No início do financiamento, a maior parte da parcela é composta por juros e pouca amortização do saldo devedor.
+          </p>
+
+          <table class="edu-table">
+            <thead>
+              <tr>
+                <th>Característica</th>
+                <th>Tabela SAC</th>
+                <th>Tabela Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Valor da Prestação</b></td>
+                <td>Decrescente (começa maior e cai todo mês)</td>
+                <td>Constante (mesmo valor do início ao fim)</td>
+              </tr>
+              <tr>
+                <td><b>Amortização da Dívida</b></td>
+                <td>Constante desde o 1º mês</td>
+                <td>Crescente (pequena no início, maior no final)</td>
+              </tr>
+              <tr>
+                <td><b>Juros Totais Pagos</b></td>
+                <td>Menor valor total de juros pagos ao banco</td>
+                <td>Maior valor total de juros pagos</td>
+              </tr>
+              <tr>
+                <td><b>Velocidade de Quitação</b></td>
+                <td>Saldo devedor diminui mais velozmente</td>
+                <td>Saldo devedor cai mais lentamente nos primeiros anos</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div>
+              <p style="font-weight: 700; font-size: 0.85rem; text-align: center; margin-bottom: 0.25rem;">Evolução do Valor da Parcela</p>
+              <img src="img/installment-value.png" alt="Evolução do valor da parcela no SAC e Price" class="diagram-img">
+            </div>
+            <div>
+              <p style="font-weight: 700; font-size: 0.85rem; text-align: center; margin-bottom: 0.25rem;">Evolução do Saldo Devedor</p>
+              <img src="img/outstanding-balance.png" alt="Evolução do saldo devedor no SAC e Price" class="diagram-img">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="accordion-item">
+        <summary class="accordion-summary">
+          <span>Amortização Extra: Por Prazo ou Por Parcela?</span>
+          <svg class="accordion-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </summary>
+        <div class="accordion-body">
+          <p>
+            Ao realizar um pagamento extraordinário (por exemplo, usando 13º salário, férias ou FGTS), você tem duas escolhas:
+          </p>
+          <ul style="margin: 0.75rem 0 0.75rem 1.5rem; line-height: 1.8;">
+            <li>
+              <b>Redução de Prazo (Recomendada financeiramente):</b> O valor extra abate diretamente o saldo devedor e elimina as últimas parcelas do contrato. Como juros são calculados sobre o tempo de exposição da dívida, você economiza o máximo possível de juros.
+            </li>
+            <li>
+              <b>Redução de Parcela:</b> O saldo devedor é abatido, mas o número de meses permanece o mesmo. Isso faz o valor da prestação mensal cair, aliviando o fluxo de caixa imediato da sua família.
+            </li>
+          </ul>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div>
+              <p style="font-weight: 700; font-size: 0.85rem; text-align: center; margin-bottom: 0.25rem;">Comportamento dos Juros</p>
+              <img src="img/interest-rate.png" alt="Comparação de juros" class="diagram-img">
+            </div>
+            <div>
+              <p style="font-weight: 700; font-size: 0.85rem; text-align: center; margin-bottom: 0.25rem;">A Amortização</p>
+              <img src="img/the-amortization.png" alt="A amortização" class="diagram-img">
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       MODALS
+       ========================================================================= -->
+
+  <!-- Modal 1: Adicionar/Editar Amortização Extra -->
+  <div class="modal-overlay" id="modalAmortization">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Configurar Amortização Extra</h3>
+        <button class="btn btn-icon btn-ghost" onclick="closeModal('modalAmortization')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-field">
+          <label class="input-label">Tipo de Redução</label>
+          <div class="radio-cards-row">
+            <label class="radio-card-label selected" onclick="selectRadioCard('modalAmortTypeTerm')">
+              <input type="radio" name="modalAmortType" id="modalAmortTypeTerm" checked value="term">
+              <span>Por Prazo (Reduz Meses)</span>
+            </label>
+            <label class="radio-card-label" onclick="selectRadioCard('modalAmortTypeInst')">
+              <input type="radio" name="modalAmortType" id="modalAmortTypeInst" value="installment">
+              <span>Por Parcela (Reduz Prestação)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="input-field">
+          <label class="input-label" for="modalAmortValue">Valor da Amortização (R$)</label>
+          <input type="text" id="modalAmortValue" class="input-control" placeholder="R$ 2.800,00" value="R$ 2.800,00">
+        </div>
+
+        <div class="input-field">
+          <label class="input-label" for="modalAmortFirstPayment">A partir da Parcela Nº</label>
+          <input type="number" id="modalAmortFirstPayment" class="input-control" min="0" max="600" value="1">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+          <input type="checkbox" id="modalAmortIsRecurring" onchange="document.getElementById('modalAmortRecurrBlock').style.display = this.checked ? 'grid' : 'none';">
+          <label for="modalAmortIsRecurring" style="font-size: 0.875rem; font-weight: 600; cursor: pointer;">
+            Repetir mensalmente (Recorrência)
+          </label>
+        </div>
+
+        <div id="modalAmortRecurrBlock" style="display: none; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="input-field">
+            <label class="input-label" for="modalAmortLastPayment">Até a Parcela Nº</label>
+            <input type="number" id="modalAmortLastPayment" class="input-control" min="1" max="600" value="420">
+          </div>
+          <div class="input-field">
+            <label class="input-label" for="modalAmortFreq">A cada quantos meses?</label>
+            <input type="number" id="modalAmortFreq" class="input-control" min="1" max="60" value="1">
+          </div>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.8rem; color: var(--success-700); line-height: 1.45;">
+          💡 <b>Multi-amortização no mesmo mês:</b> Você pode manter sua amortização recorrente (ex: R$ 2.800/mês) e adicionar amortizações pontuais no mesmo mês (ex: R$ 12.000 de 13º ou bônus). Os valores somam automaticamente na parcela!
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAmortization')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="saveAmortizationModal()">Salvar Amortização</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Adicionar/Editar Taxa / Seguro -->
+  <div class="modal-overlay" id="modalFee">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Taxa Administrativa / Seguro Mensal</h3>
+        <button class="btn btn-icon btn-ghost" onclick="closeModal('modalFee')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-field">
+          <label class="input-label" for="modalFeeValue">Valor Fixo Mensal (R$)</label>
+          <input type="text" id="modalFeeValue" class="input-control" placeholder="R$ 40,00" value="R$ 40,00">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="input-field">
+            <label class="input-label" for="modalFeeFirstPayment">Da Parcela Nº</label>
+            <input type="number" id="modalFeeFirstPayment" class="input-control" min="0" max="600" value="0">
+          </div>
+          <div class="input-field">
+            <label class="input-label" for="modalFeeLastPayment">Até a Parcela Nº</label>
+            <input type="number" id="modalFeeLastPayment" class="input-control" min="1" max="600" value="420">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalFee')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="saveFeeModal()">Salvar Taxa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Adicionar/Editar Correção Monetária -->
+  <div class="modal-overlay" id="modalCorrection">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Correção Monetária (TR / IPCA)</h3>
+        <button class="btn btn-icon btn-ghost" onclick="closeModal('modalCorrection')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-field">
+          <label class="input-label" for="modalCorrectionValue">Taxa Percentual Mensal (%)</label>
+          <input type="number" step="0.01" min="0" max="100" id="modalCorrectionValue" class="input-control" placeholder="0.17" value="0.17">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="input-field">
+            <label class="input-label" for="modalCorrectionFirstPayment">Da Parcela Nº</label>
+            <input type="number" id="modalCorrectionFirstPayment" class="input-control" min="0" max="600" value="0">
+          </div>
+          <div class="input-field">
+            <label class="input-label" for="modalCorrectionLastPayment">Até a Parcela Nº</label>
+            <input type="number" id="modalCorrectionLastPayment" class="input-control" min="1" max="600" value="420">
+          </div>
+        </div>
+
+        <div class="input-field">
+          <label class="input-label" for="modalCorrectionFreq">Frequência (a cada quantos meses?)</label>
+          <input type="number" id="modalCorrectionFreq" class="input-control" min="1" max="60" value="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalCorrection')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="saveCorrectionModal()">Salvar Correção</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Gerenciador de Cenários Salvos -->
+  <div class="modal-overlay" id="modalScenarios">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Meus Cenários Salvos</h3>
+        <button class="btn btn-icon btn-ghost" onclick="closeModal('modalScenarios')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Alterne facilmente entre diferentes cenários ou faça backup:</span>
+          <button class="btn btn-sm btn-primary" onclick="saveNewScenarioPrompt()">+ Salvar Atual</button>
+        </div>
+
+        <div class="scenarios-list" id="scenariosListContainer">
+          <!-- Rendered by app.js -->
+        </div>
+
+        <div style="border-top: 1px dashed var(--border-color); padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="exportBackupJson()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Exportar Backup JSON
+          </button>
+          <label class="btn btn-sm btn-secondary" style="cursor: pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Importar JSON
+            <input type="file" accept=".json" style="display: none;" onchange="importBackupJson(event)">
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalScenarios')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
