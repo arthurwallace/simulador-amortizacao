@@ -2,6 +2,8 @@
 extracted/
 *.zip
 
+example_bext/
+
 # OS & Editor files
 .DS_Store
 Thumbs.db
