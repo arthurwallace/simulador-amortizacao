@@ -192,6 +192,8 @@ let appState = {
   ...DEFAULT_USER_SCENARIO,
   result: null,
   activeTableTab: 'withAmort', // 'withAmort' | 'withoutAmort'
+  activeMainTab: localStorage.getItem('simulador_active_main_tab') || 'nextActions',
+  nextActionsHorizon: 6,
   tablePage: 1,
   tablePageSize: 50,
   tableSearchTerm: ''
@@ -202,6 +204,12 @@ const fmt = {
   currency: (val) => {
     if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  },
+  currencyCompact: (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'R$ 0';
+    if (val >= 1000000) return 'R$ ' + (val / 1000000).toFixed(1).replace('.', ',') + 'M';
+    if (val >= 1000) return 'R$ ' + (val / 1000).toFixed(0) + 'k';
+    return fmt.currency(val);
   },
   number: (val, decimals = 2) => {
     if (val === null || val === undefined || isNaN(val)) return '0,00';
@@ -219,8 +227,8 @@ const fmt = {
   dateISOToMonthYear: (iso) => {
     if (!iso) return '-';
     const d = new Date(iso);
-    const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-    return `${months[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return `${months[d.getUTCMonth()]}/${d.getUTCFullYear()}`;
   },
   dateISOToBR: (iso) => {
     if (!iso) return '-';
@@ -1040,7 +1048,7 @@ function renderSvgCharts() {
     }
 
     balanceContainer.innerHTML = `
-      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="balance-chart-svg">
         ${yGridHtml}
         ${xGridHtml}
         <!-- Standard curve -->
@@ -1066,32 +1074,56 @@ function renderSvgCharts() {
     const pFees = (((fees + corr) / total) * 100).toFixed(1);
 
     costContainer.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-around; height: 100%; gap: 1rem; flex-wrap: wrap;">
-        <svg viewBox="0 0 160 160" width="140" height="140">
-          <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--border-color)" stroke-width="24" />
-          <!-- Principal -->
-          <circle cx="80" cy="80" r="55" fill="transparent" stroke="#2563eb" stroke-width="24"
-            stroke-dasharray="${(pPrincipal * 3.45).toFixed(1)} 345" stroke-dashoffset="0" transform="rotate(-90 80 80)" />
-          <!-- Juros -->
-          <circle cx="80" cy="80" r="55" fill="transparent" stroke="#f59e0b" stroke-width="24"
-            stroke-dasharray="${(pInterest * 3.45).toFixed(1)} 345" stroke-dashoffset="-${(pPrincipal * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
-          <!-- Taxas/Correcao -->
-          <circle cx="80" cy="80" r="55" fill="transparent" stroke="#ec4899" stroke-width="24"
-            stroke-dasharray="${(pFees * 3.45).toFixed(1)} 345" stroke-dashoffset="-${((Number(pPrincipal) + Number(pInterest)) * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
-        </svg>
+      <div class="donut-content-layout">
+        <div class="donut-visual-box">
+          <svg viewBox="0 0 160 160" class="donut-svg">
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--border-color)" stroke-width="22" />
+            <!-- Principal -->
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#2563eb" stroke-width="22"
+              stroke-dasharray="${(pPrincipal * 3.45).toFixed(1)} 345" stroke-dashoffset="0" transform="rotate(-90 80 80)" />
+            <!-- Juros -->
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#f59e0b" stroke-width="22"
+              stroke-dasharray="${(pInterest * 3.45).toFixed(1)} 345" stroke-dashoffset="-${(pPrincipal * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
+            <!-- Taxas/Correcao -->
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#ec4899" stroke-width="22"
+              stroke-dasharray="${(pFees * 3.45).toFixed(1)} 345" stroke-dashoffset="-${((Number(pPrincipal) + Number(pInterest)) * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
+          </svg>
+          <div class="donut-center-badge">
+            <span class="donut-center-label">Custo Total</span>
+            <span class="donut-center-val">${fmt.currencyCompact(total)}</span>
+          </div>
+        </div>
 
-        <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="width: 12px; height: 12px; border-radius: 3px; background: #2563eb;"></span>
-            <span>Imóvel Financiado: <b>${fmt.currency(principal)}</b> (${pPrincipal}%)</span>
+        <div class="donut-legend-box">
+          <div class="donut-legend-row">
+            <div class="donut-legend-tag">
+              <span class="donut-dot" style="background: #2563eb;"></span>
+              <span class="donut-name">Imóvel Financiado</span>
+            </div>
+            <div class="donut-legend-values">
+              <span class="donut-val"><b>${fmt.currency(principal)}</b></span>
+              <span class="donut-pct">${pPrincipal}%</span>
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="width: 12px; height: 12px; border-radius: 3px; background: #f59e0b;"></span>
-            <span>Juros Pagos ao Banco: <b>${fmt.currency(interest)}</b> (${pInterest}%)</span>
+          <div class="donut-legend-row">
+            <div class="donut-legend-tag">
+              <span class="donut-dot" style="background: #f59e0b;"></span>
+              <span class="donut-name">Juros ao Banco</span>
+            </div>
+            <div class="donut-legend-values">
+              <span class="donut-val"><b>${fmt.currency(interest)}</b></span>
+              <span class="donut-pct">${pInterest}%</span>
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="width: 12px; height: 12px; border-radius: 3px; background: #ec4899;"></span>
-            <span>Taxas, Seguros & TR: <b>${fmt.currency(fees + corr)}</b> (${pFees}%)</span>
+          <div class="donut-legend-row">
+            <div class="donut-legend-tag">
+              <span class="donut-dot" style="background: #ec4899;"></span>
+              <span class="donut-name">Taxas, Seguros & TR</span>
+            </div>
+            <div class="donut-legend-values">
+              <span class="donut-val"><b>${fmt.currency(fees + corr)}</b></span>
+              <span class="donut-pct">${pFees}%</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1675,10 +1707,427 @@ function updateThemeIcon(theme) {
   }
 }
 
+// Main Tabs Switcher
+window.switchMainTab = function(tabName) {
+  appState.activeMainTab = tabName;
+  localStorage.setItem('simulador_active_main_tab', tabName);
+  updateMainTabsView();
+};
+
+function updateMainTabsView() {
+  const tabName = appState.activeMainTab || 'nextActions';
+
+  const tabButtons = {
+    nextActions: document.getElementById('tabBtnNextActions'),
+    overview: document.getElementById('tabBtnOverview'),
+    inputs: document.getElementById('tabBtnInputs'),
+    table: document.getElementById('tabBtnTable'),
+    all: document.getElementById('tabBtnAll')
+  };
+
+  Object.entries(tabButtons).forEach(([key, btn]) => {
+    if (btn) btn.classList.toggle('active', key === tabName);
+  });
+
+  const pNext = document.getElementById('panelNextActions');
+  const sHero = document.getElementById('sectionHeroStats');
+  const sComp = document.getElementById('sectionComparisonCards');
+  const sCharts = document.getElementById('sectionCharts');
+  const sInputs = document.getElementById('sectionInputs');
+  const sPlans = document.getElementById('sectionPlans');
+  const sTable = document.getElementById('sectionTable');
+  const sEdu = document.getElementById('sectionEducational');
+
+  function setVisible(el, isVisible) {
+    if (el) el.style.display = isVisible ? '' : 'none';
+  }
+
+  if (tabName === 'nextActions') {
+    setVisible(pNext, true);
+    setVisible(sHero, false);
+    setVisible(sComp, false);
+    setVisible(sCharts, false);
+    setVisible(sInputs, false);
+    setVisible(sPlans, false);
+    setVisible(sTable, false);
+    setVisible(sEdu, false);
+    renderNextActions();
+  } else if (tabName === 'overview') {
+    setVisible(pNext, false);
+    setVisible(sHero, true);
+    setVisible(sComp, true);
+    setVisible(sCharts, true);
+    setVisible(sInputs, false);
+    setVisible(sPlans, false);
+    setVisible(sTable, false);
+    setVisible(sEdu, false);
+    renderResults();
+  } else if (tabName === 'inputs') {
+    setVisible(pNext, false);
+    setVisible(sHero, false);
+    setVisible(sComp, false);
+    setVisible(sCharts, false);
+    setVisible(sInputs, true);
+    setVisible(sPlans, true);
+    setVisible(sTable, false);
+    setVisible(sEdu, false);
+  } else if (tabName === 'table') {
+    setVisible(pNext, false);
+    setVisible(sHero, false);
+    setVisible(sComp, false);
+    setVisible(sCharts, false);
+    setVisible(sInputs, false);
+    setVisible(sPlans, false);
+    setVisible(sTable, true);
+    setVisible(sEdu, false);
+    renderDetailedTable();
+  } else if (tabName === 'all') {
+    setVisible(pNext, true);
+    setVisible(sInputs, true);
+    setVisible(sPlans, true);
+    setVisible(sHero, true);
+    setVisible(sComp, true);
+    setVisible(sCharts, true);
+    setVisible(sTable, true);
+    setVisible(sEdu, true);
+    renderNextActions();
+    renderResults();
+  }
+}
+
+window.setNextActionsHorizon = function(months) {
+  appState.nextActionsHorizon = months;
+  [3, 6, 12].forEach(m => {
+    const btn = document.getElementById('btnHorizon' + m);
+    if (btn) btn.classList.toggle('active', m === months);
+  });
+  renderNextActions();
+};
+
+function renderNextActions() {
+  if (!appState.result) return;
+  const amortTable = appState.result.simulationWithAmortizationTable || appState.result.simulationTable || [];
+  const standardTable = appState.result.simulationTable || [];
+  if (amortTable.length === 0) return;
+
+  const today = new Date();
+  const currentYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const todayISO = today.toISOString().substring(0, 10);
+  const todayFormatted = today.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const dateEl = document.getElementById('nextActionsTodayDate');
+  if (dateEl) dateEl.textContent = todayFormatted;
+
+  // Find index for current month
+  let currIdx = amortTable.findIndex(r => r.date && r.date.substring(0, 7) === currentYM);
+  if (currIdx === -1) {
+    currIdx = amortTable.findIndex(r => r.date && r.date >= todayISO);
+    if (currIdx > 0) currIdx--;
+  }
+  if (currIdx < 0) currIdx = 0;
+
+  const currRow = amortTable[currIdx] || amortTable[0];
+  const nextRow = amortTable[currIdx + 1] || currRow;
+
+  // Status Card
+  const statusCard = document.getElementById('nextActionsStatusCard');
+  if (statusCard) {
+    const remainingInstallments = Math.max(0, amortTable.length - 1 - currRow.installment);
+    const originalRemaining = Math.max(0, (standardTable.length - 1) - currRow.installment);
+    const monthsEliminated = Math.max(0, originalRemaining - remainingInstallments);
+    const yearsEliminated = (monthsEliminated / 12).toFixed(1);
+
+    statusCard.innerHTML = `
+      <div class="status-pill-item">
+        <span class="status-pill-label">Saldo Devedor Hoje</span>
+        <span class="status-pill-val">${fmt.currency(currRow.outstandingBalance)}</span>
+      </div>
+      <div class="status-pill-sep"></div>
+      <div class="status-pill-item">
+        <span class="status-pill-label">Parcela Atual</span>
+        <span class="status-pill-val" style="color: var(--text-main);">#${currRow.installment} <small style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">de ${standardTable.length - 1}</small></span>
+      </div>
+      <div class="status-pill-sep"></div>
+      <div class="status-pill-item">
+        <span class="status-pill-label">Restam Com Amortização</span>
+        <span class="status-pill-val" style="color: var(--success-600);">${remainingInstallments} meses <small style="font-size: 0.75rem; font-weight: 600;">(-${yearsEliminated} anos)</small></span>
+      </div>
+    `;
+  }
+
+  // Horizon Calculations helper
+  function getHorizon(months) {
+    const slice = amortTable.slice(currIdx + 1, currIdx + 1 + months);
+    const extra = slice.reduce((acc, r) => acc + (r.amortization || 0), 0);
+    const bank = slice.reduce((acc, r) => acc + (r.installmentAmountWithFee || r.installmentValue || 0), 0);
+    const lastRow = slice[slice.length - 1] || currRow;
+    return {
+      months,
+      count: slice.length,
+      extra,
+      bank,
+      total: extra + bank,
+      endBalance: lastRow.outstandingBalance
+    };
+  }
+
+  const hNext = {
+    date: nextRow.date ? fmt.dateISOToBR(nextRow.date) : '-',
+    installmentNum: nextRow.installment,
+    bank: nextRow.installmentAmountWithFee || nextRow.installmentValue || 0,
+    extra: nextRow.amortization || 0,
+    total: (nextRow.installmentAmountWithFee || nextRow.installmentValue || 0) + (nextRow.amortization || 0)
+  };
+
+  const h3 = getHorizon(3);
+  const h6 = getHorizon(6);
+  const h12 = getHorizon(12);
+
+  // Metrics Grid
+  const metricsGrid = document.getElementById('nextActionsMetricsGrid');
+  if (metricsGrid) {
+    const plansNext = getPlansForInstallment(nextRow.installment);
+    const nextTag = plansNext.length > 1
+      ? `⚡ R$ ${plansNext.map(p => fmt.number(p.value, 0)).join(' + ')}`
+      : (plansNext[0]?.frequency > 0 ? 'Recorrente mensal' : 'Aporte planejado');
+
+    metricsGrid.innerHTML = `
+      <!-- Card 1: Próximo Mês Imediato -->
+      <div class="metric-action-card highlight">
+        <div class="metric-card-top">
+          <span class="metric-card-title">Próximo Vencimento (#${hNext.installmentNum})</span>
+          <span class="metric-horizon-badge">${hNext.date}</span>
+        </div>
+        <div class="metric-card-amount" style="color: var(--primary-600);">
+          ${fmt.currency(hNext.total)}
+        </div>
+        <div class="metric-card-details">
+          <div class="metric-detail-row">
+            <span>Amortização Extra:</span>
+            <b>${fmt.currency(hNext.extra)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Parcela do Banco:</span>
+            <span>${fmt.currency(hNext.bank)}</span>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--success-700); font-weight: 600; margin-top: 2px;">
+            ${nextTag}
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Próximos 3 Meses -->
+      <div class="metric-action-card">
+        <div class="metric-card-top">
+          <span class="metric-card-title">Próximos 3 Meses</span>
+          <span class="metric-horizon-badge">3 meses</span>
+        </div>
+        <div class="metric-card-amount">
+          ${fmt.currency(h3.extra)}
+        </div>
+        <div class="metric-card-details">
+          <div class="metric-detail-row">
+            <span>Total a Amortizar:</span>
+            <b style="color: var(--success-600);">${fmt.currency(h3.extra)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Desembolso Total:</span>
+            <b>${fmt.currency(h3.total)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Saldo ao final:</span>
+            <span>${fmt.currency(h3.endBalance)}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Próximos 6 Meses -->
+      <div class="metric-action-card">
+        <div class="metric-card-top">
+          <span class="metric-card-title">Próximos 6 Meses</span>
+          <span class="metric-horizon-badge">6 meses</span>
+        </div>
+        <div class="metric-card-amount">
+          ${fmt.currency(h6.extra)}
+        </div>
+        <div class="metric-card-details">
+          <div class="metric-detail-row">
+            <span>Total a Amortizar:</span>
+            <b style="color: var(--success-600);">${fmt.currency(h6.extra)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Desembolso Total:</span>
+            <b>${fmt.currency(h6.total)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Saldo ao final:</span>
+            <span>${fmt.currency(h6.endBalance)}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Próximos 12 Meses -->
+      <div class="metric-action-card">
+        <div class="metric-card-top">
+          <span class="metric-card-title">Próximos 12 Meses</span>
+          <span class="metric-horizon-badge">1 ano</span>
+        </div>
+        <div class="metric-card-amount">
+          ${fmt.currency(h12.extra)}
+        </div>
+        <div class="metric-card-details">
+          <div class="metric-detail-row">
+            <span>Total a Amortizar:</span>
+            <b style="color: var(--success-600);">${fmt.currency(h12.extra)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Desembolso Total:</span>
+            <b>${fmt.currency(h12.total)}</b>
+          </div>
+          <div class="metric-detail-row">
+            <span>Saldo ao final:</span>
+            <span>${fmt.currency(h12.endBalance)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Special Punctual Alert
+  const alertEl = document.getElementById('nextActionsSpecialAlert');
+  if (alertEl) {
+    const next12Slice = amortTable.slice(currIdx + 1, currIdx + 1 + 12);
+    const specialRow = next12Slice.find(r => {
+      const plans = getPlansForInstallment(r.installment);
+      return plans.some(p => p.frequency <= 0) || (r.amortization || 0) > (hNext.extra * 1.5);
+    });
+
+    if (specialRow) {
+      const plans = getPlansForInstallment(specialRow.installment);
+      const punctual = plans.find(p => p.frequency <= 0);
+      const extraDesc = punctual ? ` (incluindo aporte pontual de ${fmt.currency(punctual.value)})` : '';
+      const dateStr = fmt.dateISOToMonthYear(specialRow.date);
+
+      alertEl.style.display = 'flex';
+      alertEl.className = 'special-alert-banner';
+      alertEl.innerHTML = `
+        <div class="special-alert-icon">⚡</div>
+        <div class="special-alert-content">
+          <div class="special-alert-title">Aporte Especial Programado em ${dateStr} (Parcela #${specialRow.installment})</div>
+          <div class="special-alert-desc">
+            Você planejou uma amortização reforçada de <b>${fmt.currency(specialRow.amortization)}</b>${extraDesc}.
+            Nesse mês, o seu saldo devedor cairá para <b>${fmt.currency(specialRow.outstandingBalance)}</b>, acelerando fortemente o fim do financiamento!
+          </div>
+        </div>
+      `;
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }
+
+  // Monthly Timeline Table
+  const tableWrapper = document.getElementById('nextActionsTableWrapper');
+  if (tableWrapper) {
+    const horizon = appState.nextActionsHorizon || 6;
+    const upcomingRows = amortTable.slice(currIdx, currIdx + 1 + horizon);
+
+    let rowsHtml = '';
+    upcomingRows.forEach((r, idx) => {
+      const isCurrent = idx === 0;
+      const isNext = idx === 1;
+      const plans = getPlansForInstallment(r.installment);
+      const hasSpecial = plans.some(p => p.frequency <= 0);
+
+      let rowClass = '';
+      let badgeHtml = '';
+      if (isCurrent) {
+        rowClass = 'row-current';
+        badgeHtml = '<span class="badge-tag current">Mês Atual</span>';
+      } else if (isNext) {
+        rowClass = 'row-next';
+        badgeHtml = '<span class="badge-tag next">Próxima</span>';
+      } else if (hasSpecial) {
+        rowClass = 'row-special';
+        badgeHtml = '<span class="badge-tag special">⚡ Aporte Especial</span>';
+      } else {
+        badgeHtml = `<span class="badge-tag regular">Mês +${idx}</span>`;
+      }
+
+      const bankVal = r.installmentAmountWithFee || r.installmentValue || 0;
+      const extraVal = r.amortization || 0;
+      const totalDisbursement = bankVal + extraVal;
+
+      let extraDesc = '-';
+      if (extraVal > 0) {
+        if (plans.length > 1) {
+          const parts = plans.map(p => `${fmt.currency(p.value)} (${p.frequency > 0 ? 'recorrente' : 'pontual'})`).join(' + ');
+          extraDesc = `
+            <div style="font-weight: 700; color: var(--success-600);">${fmt.currency(extraVal)}</div>
+            <div style="font-size: 0.72rem; color: var(--success-700); font-weight: 600;" title="${parts}">⚡ ${parts}</div>
+          `;
+        } else {
+          const p = plans[0];
+          const tag = p ? (p.frequency > 0 ? 'recorrente' : 'pontual') : '';
+          extraDesc = `
+            <div style="font-weight: 700; color: var(--success-600);">${fmt.currency(extraVal)}</div>
+            ${tag ? `<div style="font-size: 0.7rem; color: var(--text-muted);">${tag}</div>` : ''}
+          `;
+        }
+      }
+
+      rowsHtml += `
+        <tr class="${rowClass}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              ${badgeHtml}
+              <b>#${r.installment}</b>
+            </div>
+          </td>
+          <td>
+            <b>${fmt.dateISOToBR(r.date)}</b>
+          </td>
+          <td>${fmt.currency(bankVal)}</td>
+          <td>${extraDesc}</td>
+          <td>
+            <b style="color: var(--primary-600); font-size: 0.92rem;">${fmt.currency(totalDisbursement)}</b>
+          </td>
+          <td>
+            <b>${fmt.currency(r.outstandingBalance)}</b>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.8rem;">
+            ${fmt.currency(r.interestAmount || r.interest || 0)}
+          </td>
+        </tr>
+      `;
+    });
+
+    tableWrapper.innerHTML = `
+      <table class="timeline-table">
+        <thead>
+          <tr>
+            <th>Parcela</th>
+            <th>Vencimento</th>
+            <th>Parcela Banco</th>
+            <th>Amortização Extra</th>
+            <th>Desembolso Total</th>
+            <th>Saldo Devedor Restante</th>
+            <th>Juros do Mês</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  }
+}
+
 // Master Render
 function renderAll() {
   renderPlansList();
   renderResults();
+  renderNextActions();
+  updateMainTabsView();
 }
 
 // Initialization on DOM Ready
@@ -1688,6 +2137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   syncFormInputsFromState();
   attachFormListeners();
   renderPlansList();
+  updateMainTabsView();
 
   // Initial Calculation with stored data
   fetchSimulationData();

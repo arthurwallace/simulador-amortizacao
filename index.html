@@ -67,6 +67,105 @@
       </p>
     </section>
 
+    <!-- NAVEGAÇÃO PRINCIPAL POR ABAS -->
+    <div class="main-tabs-wrapper">
+      <nav class="main-nav-tabs" role="tablist">
+        <button type="button" class="nav-tab-btn active" id="tabBtnNextActions" onclick="switchMainTab('nextActions')">
+          <span class="tab-btn-icon">🎯</span>
+          <span class="tab-btn-text">Próximas Ações & Resumo</span>
+          <span class="tab-btn-pill">Hoje</span>
+        </button>
+        <button type="button" class="nav-tab-btn" id="tabBtnOverview" onclick="switchMainTab('overview')">
+          <span class="tab-btn-icon">📊</span>
+          <span class="tab-btn-text">Resultados & Economia</span>
+        </button>
+        <button type="button" class="nav-tab-btn" id="tabBtnInputs" onclick="switchMainTab('inputs')">
+          <span class="tab-btn-icon">⚙️</span>
+          <span class="tab-btn-text">Parâmetros & Amortizações</span>
+        </button>
+        <button type="button" class="nav-tab-btn" id="tabBtnTable" onclick="switchMainTab('table')">
+          <span class="tab-btn-icon">📑</span>
+          <span class="tab-btn-text">Tabela Completa</span>
+        </button>
+        <button type="button" class="nav-tab-btn" id="tabBtnAll" onclick="switchMainTab('all')">
+          <span class="tab-btn-icon">👁️</span>
+          <span class="tab-btn-text">Página Completa</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- SEÇÃO: PRÓXIMAS AÇÕES & CRONOGRAMA IMEDIATO (BASEADO EM HOJE) -->
+    <section class="card-panel next-actions-panel" id="panelNextActions">
+      <!-- Header with Status Hoje -->
+      <div class="next-actions-header">
+        <div class="next-actions-title-wrap">
+          <div class="next-actions-badge">
+            <span class="pulse-dot active"></span>
+            <span>Acompanhamento em Tempo Real</span>
+          </div>
+          <h2 class="next-actions-title">
+            <span>🎯</span> Resumo das Próximas Ações
+          </h2>
+          <p class="next-actions-subtitle" id="nextActionsSubtitle">
+            Considerando a data de hoje (<b id="nextActionsTodayDate">...</b>), veja o saldo devedor atual e o cronograma exato de quanto amortizar nos próximos meses.
+          </p>
+        </div>
+
+        <div class="status-pill-card" id="nextActionsStatusCard">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid: Quanto Devo Amortizar -->
+      <div class="next-metrics-grid" id="nextActionsMetricsGrid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Alerta de Destaque para Aporte Especial (Pontual) -->
+      <div id="nextActionsSpecialAlert" style="display: none;"></div>
+
+      <!-- Monthly Timeline / Table of Upcoming Months -->
+      <div class="next-timeline-section">
+        <div class="timeline-header">
+          <div class="timeline-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Cronograma Mês a Mês das Próximas Parcelas & Aportes</span>
+          </div>
+
+          <div class="horizon-selector">
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Horizonte:</span>
+            <div class="horizon-btn-group">
+              <button type="button" class="horizon-btn" id="btnHorizon3" onclick="setNextActionsHorizon(3)">3 Meses</button>
+              <button type="button" class="horizon-btn active" id="btnHorizon6" onclick="setNextActionsHorizon(6)">6 Meses</button>
+              <button type="button" class="horizon-btn" id="btnHorizon12" onclick="setNextActionsHorizon(12)">12 Meses</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-table-wrapper" id="nextActionsTableWrapper">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+      </div>
+
+      <!-- Action Footer / Shortcuts -->
+      <div class="next-actions-footer">
+        <div style="font-size: 0.82rem; color: var(--text-muted);">
+          💡 <b>Dica:</b> Quer alterar ou adicionar amortizações? Alterne para a aba de parâmetros ou use os atalhos rápidos:
+        </div>
+        <div class="next-footer-actions">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="switchMainTab('inputs')">
+            ⚙️ Ajustar Parâmetros & Planos
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="switchMainTab('overview')">
+            📊 Ver Gráficos & Comparativo
+          </button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="exportTableToCSV()">
+            📥 Baixar Planilha CSV
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- SECTION 1: DADOS DO FINANCIAMENTO -->
     <section class="card-panel" id="sectionInputs">
       <div class="panel-header">
@@ -218,7 +317,7 @@
           <span>Para Onde Vai o Seu Dinheiro</span>
           <span style="font-size: 0.8rem; color: var(--text-muted);">Com Antecipação</span>
         </div>
-        <div class="svg-chart-container" id="costChartContainer">
+        <div class="donut-chart-container" id="costChartContainer">
           <!-- Donut chart rendered here -->
         </div>
       </div>
