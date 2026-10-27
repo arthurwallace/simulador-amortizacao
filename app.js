@@ -835,7 +835,7 @@ function renderPlansList() {
       const overlaps = getOverlappingPlansForPlan(p, idx);
       if (overlaps.length > 0) {
         const sharedParcels = overlaps.map(o => `mês ${o.parcel}`).join(', ');
-        extraBadgesHtml += `<span class="plan-badge" style="background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;" title="Soma com outra amortização no mesmo mês">⚡ Acumula no ${sharedParcels}</span>`;
+        extraBadgesHtml += `<span class="plan-badge plan-badge-accumulate" title="Soma com outra amortização no mesmo mês">⚡ Acumula no ${sharedParcels}</span>`;
       }
     } else if (p.type === 'fee') {
       badgeClass = 'plan-badge-fee';
@@ -1022,11 +1022,11 @@ function renderResults() {
       <!-- Com Antecipação -->
       <div class="compare-card featured">
         <div class="compare-header accelerated">
-          <div class="compare-title" style="color: var(--success-700);">
+          <div class="compare-title">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
             Com Antecipação & Amortizações
           </div>
-          <span class="api-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--success-700);">Recomendado</span>
+          <span class="api-badge recommended">Recomendado</span>
         </div>
         <div class="compare-body">
           <div class="compare-row"><span class="lbl">Valor Financiado:</span><span class="val">${fmt.currency(withAmort.loanAmount)}</span></div>
@@ -1105,9 +1105,9 @@ function renderSvgCharts() {
         ${yGridHtml}
         ${xGridHtml}
         <!-- Standard curve -->
-        <polyline points="${pointsStd}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="5,4" />
+        <polyline points="${pointsStd}" fill="none" stroke="var(--chart-line-std, #94a3b8)" stroke-width="2.5" stroke-dasharray="5,4" />
         <!-- Accelerated curve -->
-        <polyline points="${pointsAmort}" fill="none" stroke="#10b981" stroke-width="3.5" />
+        <polyline points="${pointsAmort}" fill="none" stroke="var(--chart-line-amort, #10b981)" stroke-width="3.5" />
       </svg>
     `;
   }
@@ -1132,13 +1132,13 @@ function renderSvgCharts() {
           <svg viewBox="0 0 160 160" class="donut-svg">
             <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--border-color)" stroke-width="22" />
             <!-- Principal -->
-            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#2563eb" stroke-width="22"
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--chart-donut-1, #2563eb)" stroke-width="22"
               stroke-dasharray="${(pPrincipal * 3.45).toFixed(1)} 345" stroke-dashoffset="0" transform="rotate(-90 80 80)" />
             <!-- Juros -->
-            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#f59e0b" stroke-width="22"
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--chart-donut-2, #f59e0b)" stroke-width="22"
               stroke-dasharray="${(pInterest * 3.45).toFixed(1)} 345" stroke-dashoffset="-${(pPrincipal * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
             <!-- Taxas/Correcao -->
-            <circle cx="80" cy="80" r="55" fill="transparent" stroke="#ec4899" stroke-width="22"
+            <circle cx="80" cy="80" r="55" fill="transparent" stroke="var(--chart-donut-3, #ec4899)" stroke-width="22"
               stroke-dasharray="${(pFees * 3.45).toFixed(1)} 345" stroke-dashoffset="-${((Number(pPrincipal) + Number(pInterest)) * 3.45).toFixed(1)}" transform="rotate(-90 80 80)" />
           </svg>
           <div class="donut-center-badge">
@@ -1150,7 +1150,7 @@ function renderSvgCharts() {
         <div class="donut-legend-box">
           <div class="donut-legend-row">
             <div class="donut-legend-tag">
-              <span class="donut-dot" style="background: #2563eb;"></span>
+              <span class="donut-dot" style="background: var(--chart-donut-1, #2563eb);"></span>
               <span class="donut-name">Imóvel Financiado</span>
             </div>
             <div class="donut-legend-values">
@@ -1160,7 +1160,7 @@ function renderSvgCharts() {
           </div>
           <div class="donut-legend-row">
             <div class="donut-legend-tag">
-              <span class="donut-dot" style="background: #f59e0b;"></span>
+              <span class="donut-dot" style="background: var(--chart-donut-2, #f59e0b);"></span>
               <span class="donut-name">Juros ao Banco</span>
             </div>
             <div class="donut-legend-values">
@@ -1170,7 +1170,7 @@ function renderSvgCharts() {
           </div>
           <div class="donut-legend-row">
             <div class="donut-legend-tag">
-              <span class="donut-dot" style="background: #ec4899;"></span>
+              <span class="donut-dot" style="background: var(--chart-donut-3, #ec4899);"></span>
               <span class="donut-name">Taxas, Seguros & TR</span>
             </div>
             <div class="donut-legend-values">
@@ -1238,8 +1238,8 @@ function renderDetailedTable() {
 
     const isPaid = row.installment > 0 && row.installment <= 20;
     const statusBadge = isPaid
-      ? '<span style="font-size: 0.65rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 4px; padding: 1px 4px; font-weight: 700; margin-left: 6px;">Paga</span>'
-      : (row.installment > 20 ? '<span style="font-size: 0.65rem; background: var(--bg-card-subtle); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 4px; font-weight: 600; margin-left: 6px;">Projetada</span>' : '');
+      ? '<span class="status-badge-paga">Paga</span>'
+      : (row.installment > 20 ? '<span class="status-badge-proj">Projetada</span>' : '');
 
     html += `
       <tr class="${hasExtra ? 'has-extra-amort' : ''}">
@@ -1745,6 +1745,9 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem(STORAGE_KEYS.THEME, next);
   updateThemeIcon(next);
+  if (appState.result) {
+    renderSvgCharts();
+  }
 }
 
 function initTheme() {
@@ -1968,7 +1971,7 @@ function renderNextActions() {
             <span>Parcela do Banco:</span>
             <span>${fmt.currency(hNext.bank)}</span>
           </div>
-          <div style="font-size: 0.72rem; color: var(--success-700); font-weight: 600; margin-top: 2px;">
+          <div style="font-size: 0.72rem; color: var(--success-600); font-weight: 600; margin-top: 2px;">
             ${nextTag}
           </div>
         </div>
@@ -2121,7 +2124,7 @@ function renderNextActions() {
           const parts = plans.map(p => `${fmt.currency(p.value)} (${p.frequency > 0 ? 'recorrente' : 'pontual'})`).join(' + ');
           extraDesc = `
             <div style="font-weight: 700; color: var(--success-600);">${fmt.currency(extraVal)}</div>
-            <div style="font-size: 0.72rem; color: var(--success-700); font-weight: 600;" title="${parts}">⚡ ${parts}</div>
+            <div style="font-size: 0.72rem; color: var(--success-600); font-weight: 600;" title="${parts}">⚡ ${parts}</div>
           `;
         } else {
           const p = plans[0];
