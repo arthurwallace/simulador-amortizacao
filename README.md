@@ -52,6 +52,37 @@ Projetada especialmente para publicação imediata no **Cloudflare Pages** (ou V
 
 ---
 
+## 🌐 Como Definir o Cenário Padrão Global (Para Todos que Acessarem)
+
+O simulador carrega automaticamente as configurações e amortizações definidas no arquivo estático **`default-scenario.json`**. Quando um novo padrão é publicado, qualquer visitante (novo ou recorrente) passa a carregar esse cenário automaticamente.
+
+Existem duas formas fáceis de importar um JSON e torná-lo o padrão de todos:
+
+### Opção A: Diretamente pela Interface Web
+1. Abra o simulador no navegador.
+2. Clique no botão **Meus Cenários** no topo da página.
+3. Na seção azul **"🌐 Padrão Global do Site"**, clique em **Importar JSON e Virar Padrão Global** e selecione o seu arquivo `.json`.
+4. O simulador atualizará a tela e baixará automaticamente o novo `default-scenario.json`.
+5. Substitua o `default-scenario.json` na raiz da pasta e envie para o GitHub:
+   ```bash
+   git add default-scenario.json
+   git commit -m "chore: atualizar cenario padrao global"
+   git push
+   ```
+6. O Cloudflare Pages recompilará e o novo cenário será o padrão para o mundo todo!
+
+### Opção B: Via Terminal (Comando Único)
+Você também pode usar o utilitário incluído `set-default.js`:
+```bash
+# Apenas atualiza o arquivo localmente:
+node set-default.js caminho/para/meu-cenario.json
+
+# Atualiza, comita e envia direto para o GitHub:
+node set-default.js caminho/para/meu-cenario.json --push
+```
+
+---
+
 ## 🛠️ Testando Localmente
 
 Para rodar em sua máquina:

@@ -249,12 +249,39 @@ function saveCurrentStateToStorage() {
   }
 }
 
-function loadStateFromStorage() {
+async function loadStateAndGlobalDefault() {
+  let fetchedDefault = null;
+  // 1. Fetch default-scenario.json from site if available (cache-busted)
+  try {
+    const res = await fetch('./default-scenario.json?v=' + Date.now(), { cache: 'no-cache' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.loanAmount === 'number' && Array.isArray(data.plans)) {
+        fetchedDefault = data;
+        Object.assign(DEFAULT_USER_SCENARIO, data);
+      }
+    }
+  } catch (e) {
+    console.warn('default-scenario.json fetch failed, using embedded default', e);
+  }
+
+  const serverTs = fetchedDefault?.updatedAt || DEFAULT_USER_SCENARIO.updatedAt;
+  const lastAppliedTs = localStorage.getItem('simulador_applied_default_ts');
+
+  // If server default has been updated (or first run), apply it immediately as the active scenario for all visitors
+  if (serverTs && serverTs !== lastAppliedTs) {
+    appState = { ...appState, ...DEFAULT_USER_SCENARIO };
+    localStorage.setItem('simulador_applied_default_ts', serverTs);
+    saveCurrentStateToStorage();
+    return;
+  }
+
+  // 2. Load from localStorage if user has custom saved state
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.STATE);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.loanAmount === 'number') {
+      if (parsed && typeof parsed.loanAmount === 'number' && Array.isArray(parsed.plans)) {
         appState = { ...appState, ...parsed };
         return;
       }
@@ -262,8 +289,12 @@ function loadStateFromStorage() {
   } catch (e) {
     console.warn('LocalStorage load failed', e);
   }
-  // Default fallback
+
+  // 3. Fallback to global default
   appState = { ...appState, ...DEFAULT_USER_SCENARIO };
+  if (serverTs) {
+    localStorage.setItem('simulador_applied_default_ts', serverTs);
+  }
 }
 
 function getSavedScenarios() {
@@ -808,17 +839,34 @@ window.clearAllPlans = function() {
   }
 };
 
-window.restoreDefaultScenario = function() {
-  if (confirm('Deseja restaurar o cenário original de 16 planos (Financiamento R$ 228k)?')) {
+window.restoreDefaultScenario = async function() {
+  if (confirm('Deseja restaurar o cenário padrão global do simulador?')) {
+    try {
+      const res = await fetch('./default-scenario.json?v=' + Date.now(), { cache: 'no-cache' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data.loanAmount === 'number') {
+          Object.assign(DEFAULT_USER_SCENARIO, data);
+          if (data.updatedAt) {
+            localStorage.setItem('simulador_applied_default_ts', data.updatedAt);
+          }
+        }
+      }
+    } catch (e) {}
+
     appState.plans = JSON.parse(JSON.stringify(DEFAULT_USER_SCENARIO.plans));
     appState.loanAmount = DEFAULT_USER_SCENARIO.loanAmount;
     appState.interestRate = DEFAULT_USER_SCENARIO.interestRate;
+    appState.interestRateType = DEFAULT_USER_SCENARIO.interestRateType ?? 0;
     appState.numberOfInstallments = DEFAULT_USER_SCENARIO.numberOfInstallments;
     appState.date = DEFAULT_USER_SCENARIO.date;
+    appState.amortizationSystemType = DEFAULT_USER_SCENARIO.amortizationSystemType ?? 0;
+    appState.name = DEFAULT_USER_SCENARIO.name || 'Cenário Padrão';
     saveCurrentStateToStorage();
     syncFormInputsFromState();
     renderPlansList();
     fetchSimulationData();
+    showToast('Cenário padrão global restaurado!', 'success');
   }
 };
 
@@ -1518,6 +1566,88 @@ window.importBackupJson = function(event) {
   reader.readAsText(file);
 };
 
+window.downloadDefaultScenarioJson = function() {
+  const toExport = {
+    name: appState.name || 'Financiamento Padrão',
+    version: '2.0',
+    updatedAt: new Date().toISOString(),
+    loanAmount: appState.loanAmount,
+    date: appState.date,
+    amortizationSystemType: appState.amortizationSystemType,
+    interestRate: appState.interestRate,
+    interestRateType: appState.interestRateType,
+    numberOfInstallments: appState.numberOfInstallments,
+    plans: appState.plans
+  };
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(toExport, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute('href', dataStr);
+  dlAnchor.setAttribute('download', 'default-scenario.json');
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  dlAnchor.remove();
+  showToast('Arquivo default-scenario.json baixado!', 'success');
+};
+
+window.importAndSetAsGlobalDefault = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let imported = JSON.parse(e.target.result);
+      if (!imported.loanAmount && typeof imported === 'object') {
+        const firstKey = Object.keys(imported)[0];
+        if (firstKey && imported[firstKey]?.loanAmount) {
+          imported = imported[firstKey];
+        }
+      }
+      if (typeof imported.loanAmount !== 'number' || !Array.isArray(imported.plans)) {
+        alert('O arquivo selecionado não contém uma estrutura válida de financiamento (requer loanAmount e lista de plans).');
+        return;
+      }
+
+      imported.updatedAt = new Date().toISOString();
+
+      // Update appState
+      appState = {
+        ...appState,
+        ...imported,
+        name: imported.name || 'Cenário Padrão'
+      };
+
+      // Update DEFAULT_USER_SCENARIO in memory
+      Object.assign(DEFAULT_USER_SCENARIO, imported);
+
+      // Save to localStorage
+      saveCurrentStateToStorage();
+      localStorage.setItem('simulador_applied_default_ts', imported.updatedAt);
+      syncFormInputsFromState();
+      renderPlansList();
+      fetchSimulationData();
+      closeModal('modalScenarios');
+
+      // Trigger download of default-scenario.json with this data
+      downloadDefaultScenarioJson();
+
+      alert(
+        '✅ Cenário importado com sucesso!\n\n' +
+        'O arquivo "default-scenario.json" foi baixado para o seu computador.\n\n' +
+        '📌 Para torná-lo o padrão de TODOS os visitantes no Cloudflare Pages:\n' +
+        '1. Salve este arquivo "default-scenario.json" na pasta do projeto.\n' +
+        '2. Envie para o GitHub executando:\n' +
+        '   git add default-scenario.json\n' +
+        '   git commit -m "chore: atualizar cenario padrao global"\n' +
+        '   git push\n\n' +
+        'O Cloudflare Pages atualizará automaticamente o padrão para todos os acessos do mundo!'
+      );
+    } catch (err) {
+      alert('Erro ao importar JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+};
+
 // Dark / Light Theme
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
@@ -1552,9 +1682,9 @@ function renderAll() {
 }
 
 // Initialization on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
-  loadStateFromStorage();
+  await loadStateAndGlobalDefault();
   syncFormInputsFromState();
   attachFormListeners();
   renderPlansList();

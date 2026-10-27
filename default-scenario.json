@@ -1,0 +1,171 @@
+{
+  "name": "Financiamento R$ 228k (SAC)",
+  "version": "2.0",
+  "updatedAt": "2026-10-27T02:18:55.674Z",
+  "loanAmount": 228000,
+  "date": "2025-02-26",
+  "amortizationSystemType": 0,
+  "interestRate": 12.19,
+  "interestRateType": 0,
+  "numberOfInstallments": 420,
+  "plans": [
+    {
+      "id": "plan_1",
+      "type": "correction",
+      "name": "Correção Monetária (TR/IPCA)",
+      "value": 0.17,
+      "firstPayment": 0,
+      "lastPayment": 420,
+      "frequency": 1
+    },
+    {
+      "id": "plan_2",
+      "type": "fee",
+      "name": "Taxa / Seguro Mensal",
+      "value": 40,
+      "firstPayment": 0,
+      "lastPayment": 420,
+      "frequency": 1
+    },
+    {
+      "id": "plan_3",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 4443.8,
+      "firstPayment": 7,
+      "lastPayment": 7,
+      "frequency": -1
+    },
+    {
+      "id": "plan_4",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 1800,
+      "firstPayment": 8,
+      "lastPayment": 8,
+      "frequency": -1
+    },
+    {
+      "id": "plan_5",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 7148.42,
+      "firstPayment": 9,
+      "lastPayment": 9,
+      "frequency": -1
+    },
+    {
+      "id": "plan_6",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 4100,
+      "firstPayment": 10,
+      "lastPayment": 10,
+      "frequency": -1
+    },
+    {
+      "id": "plan_7",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 3550,
+      "firstPayment": 11,
+      "lastPayment": 11,
+      "frequency": -1
+    },
+    {
+      "id": "plan_8",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 50000,
+      "firstPayment": 16,
+      "lastPayment": 16,
+      "frequency": -1
+    },
+    {
+      "id": "plan_9",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 6600,
+      "firstPayment": 17,
+      "lastPayment": 17,
+      "frequency": -1
+    },
+    {
+      "id": "plan_10",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 3742.16,
+      "firstPayment": 18,
+      "lastPayment": 18,
+      "frequency": -1
+    },
+    {
+      "id": "plan_11",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 2836.92,
+      "firstPayment": 19,
+      "lastPayment": 19,
+      "frequency": -1
+    },
+    {
+      "id": "plan_12",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Recorrente",
+      "value": 2800,
+      "firstPayment": 20,
+      "lastPayment": 22,
+      "frequency": 1
+    },
+    {
+      "id": "plan_13",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Pontual",
+      "value": 12000,
+      "firstPayment": 23,
+      "lastPayment": 23,
+      "frequency": -1
+    },
+    {
+      "id": "plan_14",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Recorrente",
+      "value": 2800,
+      "firstPayment": 23,
+      "lastPayment": 40,
+      "frequency": 1
+    },
+    {
+      "id": "plan_15",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Pontual",
+      "value": 10000,
+      "firstPayment": 41,
+      "lastPayment": 41,
+      "frequency": -1
+    },
+    {
+      "id": "plan_16",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Recorrente",
+      "value": 2800,
+      "firstPayment": 42,
+      "lastPayment": 420,
+      "frequency": 1
+    }
+  ]
+}
