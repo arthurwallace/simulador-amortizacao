@@ -1,7 +1,7 @@
 {
   "name": "Financiamento R$ 228k (SAC)",
   "version": "2.0",
-  "updatedAt": "2026-10-27T02:18:55.674Z",
+  "updatedAt": "2026-10-27T02:42:19.620Z",
   "loanAmount": 228000,
   "date": "2025-02-26",
   "amortizationSystemType": 0,
@@ -118,54 +118,54 @@
       "frequency": -1
     },
     {
-      "id": "plan_12",
+      "id": "plan_1793065221199",
       "type": "amortization",
       "subType": "term",
-      "name": "Amortização Recorrente",
+      "name": "Amortização Extra",
       "value": 2800,
       "firstPayment": 20,
-      "lastPayment": 22,
+      "lastPayment": 420,
       "frequency": 1
     },
     {
-      "id": "plan_13",
+      "id": "plan_1793065315711",
       "type": "amortization",
       "subType": "term",
-      "name": "Amortização Pontual",
+      "name": "Amortização Extra",
       "value": 12000,
       "firstPayment": 23,
       "lastPayment": 23,
       "frequency": -1
     },
     {
-      "id": "plan_14",
+      "id": "plan_1793065376189",
       "type": "amortization",
       "subType": "term",
-      "name": "Amortização Recorrente",
-      "value": 2800,
-      "firstPayment": 23,
-      "lastPayment": 40,
-      "frequency": 1
-    },
-    {
-      "id": "plan_15",
-      "type": "amortization",
-      "subType": "term",
-      "name": "Amortização Pontual",
-      "value": 10000,
-      "firstPayment": 41,
-      "lastPayment": 41,
+      "name": "Amortização Extra",
+      "value": 5000,
+      "firstPayment": 28,
+      "lastPayment": 28,
       "frequency": -1
     },
     {
-      "id": "plan_16",
+      "id": "plan_1793065406298",
       "type": "amortization",
       "subType": "term",
-      "name": "Amortização Recorrente",
-      "value": 2800,
-      "firstPayment": 42,
-      "lastPayment": 420,
-      "frequency": 1
+      "name": "Amortização Extra",
+      "value": 2500,
+      "firstPayment": 27,
+      "lastPayment": 27,
+      "frequency": -1
+    },
+    {
+      "id": "plan_1793065505520",
+      "type": "amortization",
+      "subType": "term",
+      "name": "Amortização Extra",
+      "value": 5000,
+      "firstPayment": 28,
+      "lastPayment": 28,
+      "frequency": -1
     }
   ]
 }
