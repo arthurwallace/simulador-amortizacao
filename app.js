@@ -17,174 +17,205 @@ const STORAGE_KEYS = {
 };
 
 // Default Scenario extracted from the user's provided simulation data
+// Preset Scenarios based on the official Itaú DDC (Demonstrativo Descritivo de Crédito)
+const HISTORICAL_DDC_PLANS = [
+  {
+    id: 'plan_1',
+    type: 'correction',
+    name: 'Correção Monetária TR Histórica (Parcelas 1 a 20)',
+    value: 0.17,
+    firstPayment: 1,
+    lastPayment: 20,
+    frequency: 1
+  },
+  {
+    id: 'plan_2',
+    type: 'fee',
+    name: 'Seguro Mensal Histórico (MIP + DFI)',
+    value: 40.00,
+    firstPayment: 1,
+    lastPayment: 20,
+    frequency: 1
+  },
+  {
+    id: 'plan_2_proj',
+    type: 'fee',
+    name: 'Seguro Mensal Atual / Projetado (MIP + DFI)',
+    value: 31.00,
+    firstPayment: 21,
+    lastPayment: 420,
+    frequency: 1
+  },
+  {
+    id: 'plan_3',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Set/2025 - R$ 4,4k)',
+    value: 4443.80,
+    firstPayment: 7,
+    lastPayment: 7,
+    frequency: -1
+  },
+  {
+    id: 'plan_4',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Out/2025 - R$ 1,8k)',
+    value: 1800.00,
+    firstPayment: 8,
+    lastPayment: 8,
+    frequency: -1
+  },
+  {
+    id: 'plan_5',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Dez/2025 - R$ 7,1k)',
+    value: 7148.42,
+    firstPayment: 9,
+    lastPayment: 9,
+    frequency: -1
+  },
+  {
+    id: 'plan_6',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Jan/2026 - R$ 4,1k)',
+    value: 4100.00,
+    firstPayment: 10,
+    lastPayment: 10,
+    frequency: -1
+  },
+  {
+    id: 'plan_7',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Fev/2026 - R$ 3,5k)',
+    value: 3550.00,
+    firstPayment: 11,
+    lastPayment: 11,
+    frequency: -1
+  },
+  {
+    id: 'plan_8',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Jul/2026 - R$ 50k)',
+    value: 50000.00,
+    firstPayment: 16,
+    lastPayment: 16,
+    frequency: -1
+  },
+  {
+    id: 'plan_9',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Ago/2026 - R$ 6,6k)',
+    value: 6600.00,
+    firstPayment: 17,
+    lastPayment: 17,
+    frequency: -1
+  },
+  {
+    id: 'plan_10',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Set/2026 - R$ 3,7k)',
+    value: 3742.16,
+    firstPayment: 18,
+    lastPayment: 18,
+    frequency: -1
+  },
+  {
+    id: 'plan_11',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Extra (Out/2026 - R$ 2,8k)',
+    value: 2836.92,
+    firstPayment: 19,
+    lastPayment: 19,
+    frequency: -1
+  }
+];
+
+const ACCELERATED_FUTURE_PLANS = [
+  {
+    id: 'plan_12',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Amortização Recorrente Planejada (R$ 2.800/mês)',
+    value: 2800.00,
+    firstPayment: 21,
+    lastPayment: 420,
+    frequency: 1
+  },
+  {
+    id: 'plan_13',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Aporte Pontual Planejado (Mês 23 - R$ 12k)',
+    value: 12000.00,
+    firstPayment: 23,
+    lastPayment: 23,
+    frequency: -1
+  },
+  {
+    id: 'plan_14',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Aporte Pontual Planejado (Mês 27 - R$ 2,5k)',
+    value: 2500.00,
+    firstPayment: 27,
+    lastPayment: 27,
+    frequency: -1
+  },
+  {
+    id: 'plan_15',
+    type: 'amortization',
+    subType: 'term',
+    name: 'Aporte Pontual Planejado (Mês 28 - R$ 10k)',
+    value: 10000.00,
+    firstPayment: 28,
+    lastPayment: 28,
+    frequency: -1
+  }
+];
+
+const PRESET_SCENARIOS = {
+  'Financiamento R$ 228k (SAC) - Estratégia Acelerada': {
+    name: 'Financiamento R$ 228k (SAC) - Estratégia Acelerada',
+    loanAmount: 228000,
+    date: '2025-02-26',
+    amortizationSystemType: 0,
+    interestRate: 12.19,
+    interestRateType: 0,
+    numberOfInstallments: 420,
+    plans: [...HISTORICAL_DDC_PLANS, ...ACCELERATED_FUTURE_PLANS]
+  },
+  'Financiamento R$ 228k (SAC) - Contrato Oficial DDC Itaú (118 meses)': {
+    name: 'Financiamento R$ 228k (SAC) - Contrato Oficial DDC Itaú (118 meses)',
+    loanAmount: 228000,
+    date: '2025-02-26',
+    amortizationSystemType: 0,
+    interestRate: 12.19,
+    interestRateType: 0,
+    numberOfInstallments: 420,
+    plans: [...HISTORICAL_DDC_PLANS]
+  }
+};
+
+// Default Scenario extracted from the user's provided simulation data
 const DEFAULT_USER_SCENARIO = {
-  name: 'Financiamento R$ 228k (SAC)',
+  name: 'Financiamento R$ 228k (SAC) - Estratégia Acelerada',
+  version: '2.1',
+  updatedAt: '2026-10-27T10:45:00.000Z',
   loanAmount: 228000,
   date: '2025-02-26',
   amortizationSystemType: 0, // 0 = SAC, 1 = Price
   interestRate: 12.19,
   interestRateType: 0, // 0 = a.a. (anual), 1 = a.m. (mensal)
   numberOfInstallments: 420,
-  plans: [
-    {
-      id: 'plan_1',
-      type: 'correction',
-      name: 'Correção Monetária (TR/IPCA)',
-      value: 0.17, // 0.17%
-      firstPayment: 0,
-      lastPayment: 420,
-      frequency: 1
-    },
-    {
-      id: 'plan_2',
-      type: 'fee',
-      name: 'Taxa / Seguro Mensal',
-      value: 40.00,
-      firstPayment: 0,
-      lastPayment: 420,
-      frequency: 1
-    },
-    {
-      id: 'plan_3',
-      type: 'amortization',
-      subType: 'term', // prazo
-      name: 'Amortização Extra',
-      value: 4443.80,
-      firstPayment: 7,
-      lastPayment: 7,
-      frequency: -1
-    },
-    {
-      id: 'plan_4',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 1800.00,
-      firstPayment: 8,
-      lastPayment: 8,
-      frequency: -1
-    },
-    {
-      id: 'plan_5',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 7148.42,
-      firstPayment: 9,
-      lastPayment: 9,
-      frequency: -1
-    },
-    {
-      id: 'plan_6',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 4100.00,
-      firstPayment: 10,
-      lastPayment: 10,
-      frequency: -1
-    },
-    {
-      id: 'plan_7',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 3550.00,
-      firstPayment: 11,
-      lastPayment: 11,
-      frequency: -1
-    },
-    {
-      id: 'plan_8',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 50000.00,
-      firstPayment: 16,
-      lastPayment: 16,
-      frequency: -1
-    },
-    {
-      id: 'plan_9',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 6600.00,
-      firstPayment: 17,
-      lastPayment: 17,
-      frequency: -1
-    },
-    {
-      id: 'plan_10',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 3742.16,
-      firstPayment: 18,
-      lastPayment: 18,
-      frequency: -1
-    },
-    {
-      id: 'plan_11',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Extra',
-      value: 2836.92,
-      firstPayment: 19,
-      lastPayment: 19,
-      frequency: -1
-    },
-    {
-      id: 'plan_12',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Recorrente',
-      value: 2800.00,
-      firstPayment: 20,
-      lastPayment: 22,
-      frequency: 1
-    },
-    {
-      id: 'plan_13',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Pontual',
-      value: 12000.00,
-      firstPayment: 23,
-      lastPayment: 23,
-      frequency: -1
-    },
-    {
-      id: 'plan_14',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Recorrente',
-      value: 2800.00,
-      firstPayment: 23,
-      lastPayment: 40,
-      frequency: 1
-    },
-    {
-      id: 'plan_15',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Pontual',
-      value: 10000.00,
-      firstPayment: 41,
-      lastPayment: 41,
-      frequency: -1
-    },
-    {
-      id: 'plan_16',
-      type: 'amortization',
-      subType: 'term',
-      name: 'Amortização Recorrente',
-      value: 2800.00,
-      firstPayment: 42,
-      lastPayment: 420,
-      frequency: 1
-    }
-  ]
+  plans: [...HISTORICAL_DDC_PLANS, ...ACCELERATED_FUTURE_PLANS]
 };
 
 // Application State
@@ -308,9 +339,10 @@ async function loadStateAndGlobalDefault() {
 function getSavedScenarios() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SCENARIOS);
-    return raw ? JSON.parse(raw) : { [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
+    const customScenarios = raw ? JSON.parse(raw) : {};
+    return { ...PRESET_SCENARIOS, ...customScenarios, [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
   } catch (e) {
-    return { [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
+    return { ...PRESET_SCENARIOS, [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
   }
 }
 
@@ -468,6 +500,8 @@ function runLocalSimulation(payload) {
       // Extra amortization
       let extraVal = 0;
       let byTerm = true;
+      let termRecalculated = false;
+
       if (withAmort && payload.amortizations[k]) {
         extraVal = payload.amortizations[k].value;
         byTerm = payload.amortizations[k].amortizationByTerm;
@@ -477,13 +511,31 @@ function runLocalSimulation(payload) {
         totalExtraAmort += extraVal;
 
         if (byTerm) {
-          if (monthlyAmort > 0) {
-            currentRemainingInstallments = Math.max(1, Math.round(balance / monthlyAmort));
+          if (isSAC) {
+            // SAC Term Reduction (Itaú / Brazilian Banking Model):
+            // Keeps borrower installment capacity (PMT = A + J) constant,
+            // using interest savings from balance reduction to accelerate principal amortization.
+            const targetPMT = installmentAmount;
+            const nextEstInterest = balance * iMonthly;
+            const newAmort = targetPMT - nextEstInterest;
+            if (newAmort > 0) {
+              currentRemainingInstallments = Math.max(1, Math.round(balance / newAmort));
+              termRecalculated = true;
+            }
+          } else {
+            // Price Term Reduction
+            const denom = installmentAmount - balance * iMonthly;
+            if (denom > 0) {
+              currentRemainingInstallments = Math.max(1, Math.ceil(-Math.log(1 - (balance * iMonthly) / installmentAmount) / Math.log(1 + iMonthly)));
+              termRecalculated = true;
+            }
           }
         }
       }
 
-      currentRemainingInstallments--;
+      if (!termRecalculated) {
+        currentRemainingInstallments--;
+      }
 
       table.push({
         installment: k,
@@ -497,7 +549,8 @@ function runLocalSimulation(payload) {
         monthlyAmortization: monthlyAmort,
         amortization: extraVal,
         outstandingBalance: Math.max(0, balance),
-        amortizationByTerm: byTerm
+        amortizationByTerm: byTerm,
+        numberOfInstallmentsCurrent: currentRemainingInstallments
       });
 
       if (balance <= 0.01) break;
@@ -1183,9 +1236,14 @@ function renderDetailedTable() {
       }
     }
 
+    const isPaid = row.installment > 0 && row.installment <= 20;
+    const statusBadge = isPaid
+      ? '<span style="font-size: 0.65rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 4px; padding: 1px 4px; font-weight: 700; margin-left: 6px;">Paga</span>'
+      : (row.installment > 20 ? '<span style="font-size: 0.65rem; background: var(--bg-card-subtle); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 4px; font-weight: 600; margin-left: 6px;">Projetada</span>' : '');
+
     html += `
       <tr class="${hasExtra ? 'has-extra-amort' : ''}">
-        <td><b>${row.installment}</b></td>
+        <td><div style="display: flex; align-items: center;"><b>${row.installment}</b>${statusBadge}</div></td>
         <td>${fmt.dateISOToBR(row.date)}</td>
         <td>${fmt.currency(row.installmentAmountWithFee)}</td>
         <td>${fmt.currency(row.monthlyAmortization)}</td>
