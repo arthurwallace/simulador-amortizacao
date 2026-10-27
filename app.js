@@ -1730,13 +1730,13 @@ function updateMainTabsView() {
   });
 
   const pNext = document.getElementById('panelNextActions');
-  const sHero = document.getElementById('sectionHeroStats');
-  const sComp = document.getElementById('sectionComparisonCards');
-  const sCharts = document.getElementById('sectionCharts');
+  const sHero = document.getElementById('achievementHero') || document.getElementById('sectionHeroStats');
+  const sComp = document.getElementById('comparisonContainer') || document.getElementById('sectionComparisonCards');
+  const sCharts = document.getElementById('sectionCharts') || document.querySelector('.charts-grid');
   const sInputs = document.getElementById('sectionInputs');
   const sPlans = document.getElementById('sectionPlans');
   const sTable = document.getElementById('sectionTable');
-  const sEdu = document.getElementById('sectionEducational');
+  const sEdu = document.getElementById('sectionEducation') || document.getElementById('sectionEducational');
 
   function setVisible(el, isVisible) {
     if (el) el.style.display = isVisible ? '' : 'none';
