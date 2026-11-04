@@ -49,6 +49,57 @@ require('./real-ledger.js');
 async function runTestSuite() {
   console.log('=== INICIANDO TESTES DO SIMULADOR DE AMORTIZAÇÃO & EXTRATO REAL ===\n');
 
+  // Teste de Carregamento e Escopo Global no Navegador (Sem colisões de const/let)
+  console.log('--- Teste: Verificação de Escopo e Ausência de SyntaxError no Navegador ---');
+  const vm = require('vm');
+  const browserCtx = {
+    console,
+    setTimeout,
+    clearTimeout,
+    Intl,
+    Date,
+    Math,
+    JSON,
+    Array,
+    Object,
+    String,
+    Number,
+    Boolean,
+    RegExp,
+    Map,
+    Set,
+    parseFloat,
+    parseInt,
+    isNaN,
+    isFinite
+  };
+  browserCtx.window = browserCtx;
+  browserCtx.globalThis = browserCtx;
+  browserCtx.document = {
+    addEventListener: () => {},
+    getElementById: () => ({
+      value: '', textContent: '', style: {}, classList: { add: () => {}, remove: () => {}, toggle: () => {} }, innerHTML: '', querySelector: () => null
+    }),
+    querySelectorAll: () => []
+  };
+  browserCtx.localStorage = {
+    _data: {},
+    getItem: (k) => browserCtx.localStorage._data[k] || null,
+    setItem: (k, v) => { browserCtx.localStorage._data[k] = String(v); },
+    removeItem: (k) => { delete browserCtx.localStorage._data[k]; }
+  };
+  vm.createContext(browserCtx);
+
+  const scripts = ['calculation-engine.js', 'app.js', 'real-ledger.js'];
+  for (const s of scripts) {
+    const code = fs.readFileSync(s, 'utf8');
+    vm.runInContext(code, browserCtx);
+  }
+  browserCtx.window.renderRealLedger();
+  browserCtx.window.switchMainTab('realLedger');
+  browserCtx.window.switchMainTab('simulator');
+  console.log('✅ Scripts carregados e executados em escopo compartilhado de navegador sem nenhum SyntaxError!\n');
+
   // Teste 0: Modularidade do Motor de Cálculo Financeiro (CalculationEngine)
   console.log('--- Teste 0: Modularidade do CalculationEngine ---');
   const mRate = CalculationEngine.RateUtils.annualEffectiveToMonthly(12.19);
