@@ -176,15 +176,21 @@ async function runTestSuite() {
   const hasSubFutureOpen = renderedHtml.includes('🔮 Taxas e Seguros Projetados');
   const hasSubPastClosed = renderedHtml.includes('📜 Taxas e Seguros Históricos');
 
-  console.log('Amortizações Futuras aberta por padrão:', hasFutureAmortOpen);
-  console.log('Amortizações Passadas FECHADA por padrão:', hasPastAmortClosed);
-  console.log('Taxas e Correções aberta por padrão:', hasFeesAndCorrOpen);
-  console.log('Taxas Futuras e Passadas organizadas:', hasSubFutureOpen && hasSubPastClosed);
+  const posFeesAndCorr = renderedHtml.indexOf('id="collapseFeesAndCorr"');
+  const posPastAmorts = renderedHtml.indexOf('id="collapsePastAmorts"');
+  const posFutureAmorts = renderedHtml.indexOf('id="collapseFutureAmorts"');
+  const orderCorrect = (posFeesAndCorr < posPastAmorts) && (posPastAmorts < posFutureAmorts);
 
-  if (!hasFutureAmortOpen || !hasPastAmortClosed || !hasFeesAndCorrOpen) {
-    throw new Error('Falha na estrutura de collapse dos planos');
+  console.log('Taxas e Correções aberta por padrão:', hasFeesAndCorrOpen);
+  console.log('Amortizações Passadas FECHADA por padrão:', hasPastAmortClosed);
+  console.log('Amortizações Futuras aberta por padrão:', hasFutureAmortOpen);
+  console.log('Taxas Futuras e Passadas organizadas:', hasSubFutureOpen && hasSubPastClosed);
+  console.log('Ordem correta (1º Taxas/Correções, 2º Passadas, 3º Futuras):', orderCorrect);
+
+  if (!hasFutureAmortOpen || !hasPastAmortClosed || !hasFeesAndCorrOpen || !orderCorrect) {
+    throw new Error('Falha na estrutura ou ordem de collapse dos planos');
   }
-  console.log('✅ Teste 5 passou com sucesso! Seções colapsáveis configuradas corretamente!\n');
+  console.log('✅ Teste 5 passou com sucesso! Seções colapsáveis configuradas e ordenadas corretamente!\n');
 
   console.log('🎉 TODOS OS TESTES PASSARAM COM 100% DE SUCESSO! 🎉');
 }

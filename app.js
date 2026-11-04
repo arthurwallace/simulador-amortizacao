@@ -883,55 +883,7 @@ function renderPlansList() {
 
   let html = '';
 
-  // 1. COLLAPSE: AMORTIZAÇÕES EXTRAS FUTURAS (ABERTO POR PADRÃO)
-  if (futureAmorts.length > 0) {
-    html += `
-      <details class="plans-group-collapse" open id="collapseFutureAmorts">
-        <summary class="plans-group-summary">
-          <div class="plans-summary-left">
-            <span class="plans-summary-icon">🎯</span>
-            <div>
-              <div class="plans-summary-title">Amortizações Extras Futuras (Planejadas)</div>
-              <div class="plans-summary-sub">Aportes recorrentes e pontuais a partir da parcela #21</div>
-            </div>
-          </div>
-          <div class="plans-summary-right">
-            <span class="plans-summary-count">${futureAmorts.length} plano(s)</span>
-            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </div>
-        </summary>
-        <div class="plans-group-body">
-          ${futureAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
-        </div>
-      </details>
-    `;
-  }
-
-  // 2. COLLAPSE: AMORTIZAÇÕES EXTRAS PASSADAS (INICIALMENTE FECHADO - SEM 'open')
-  if (pastAmorts.length > 0) {
-    html += `
-      <details class="plans-group-collapse" id="collapsePastAmorts">
-        <summary class="plans-group-summary">
-          <div class="plans-summary-left">
-            <span class="plans-summary-icon">📜</span>
-            <div>
-              <div class="plans-summary-title">Amortizações Extras Passadas (Histórico / Realizadas)</div>
-              <div class="plans-summary-sub">Amortizações já executadas (parcelas #1 a #20) • Clique para expandir</div>
-            </div>
-          </div>
-          <div class="plans-summary-right">
-            <span class="plans-summary-count" style="background: var(--bg-card-subtle); color: var(--text-muted);">${pastAmorts.length} plano(s)</span>
-            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </div>
-        </summary>
-        <div class="plans-group-body">
-          ${pastAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
-        </div>
-      </details>
-    `;
-  }
-
-  // 3. COLLAPSE: TAXAS E CORREÇÕES MONETÁRIAS (COM PASSADAS E FUTURAS)
+  // 1. COLLAPSE: TAXAS E CORREÇÕES MONETÁRIAS (PRIMEIRO)
   if (feeAndCorrPlans.length > 0) {
     html += `
       <details class="plans-group-collapse" open id="collapseFeesAndCorr">
@@ -974,6 +926,54 @@ function renderPlansList() {
                 : '<p class="plans-empty-text">Nenhuma taxa passada cadastrada.</p>'}
             </div>
           </details>
+        </div>
+      </details>
+    `;
+  }
+
+  // 2. COLLAPSE: AMORTIZAÇÕES EXTRAS PASSADAS (DEPOIS - COLLAPSADO / FECHADO INICIALMENTE)
+  if (pastAmorts.length > 0) {
+    html += `
+      <details class="plans-group-collapse" id="collapsePastAmorts">
+        <summary class="plans-group-summary">
+          <div class="plans-summary-left">
+            <span class="plans-summary-icon">📜</span>
+            <div>
+              <div class="plans-summary-title">Amortizações Extras Passadas (Histórico / Realizadas)</div>
+              <div class="plans-summary-sub">Amortizações já executadas (parcelas #1 a #20) • Clique para expandir</div>
+            </div>
+          </div>
+          <div class="plans-summary-right">
+            <span class="plans-summary-count" style="background: var(--bg-card-subtle); color: var(--text-muted);">${pastAmorts.length} plano(s)</span>
+            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <div class="plans-group-body">
+          ${pastAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
+        </div>
+      </details>
+    `;
+  }
+
+  // 3. COLLAPSE: AMORTIZAÇÕES EXTRAS FUTURAS (POR FIM - ABERTO POR PADRÃO)
+  if (futureAmorts.length > 0) {
+    html += `
+      <details class="plans-group-collapse" open id="collapseFutureAmorts">
+        <summary class="plans-group-summary">
+          <div class="plans-summary-left">
+            <span class="plans-summary-icon">🎯</span>
+            <div>
+              <div class="plans-summary-title">Amortizações Extras Futuras (Planejadas)</div>
+              <div class="plans-summary-sub">Aportes recorrentes e pontuais a partir da parcela #21</div>
+            </div>
+          </div>
+          <div class="plans-summary-right">
+            <span class="plans-summary-count">${futureAmorts.length} plano(s)</span>
+            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <div class="plans-group-body">
+          ${futureAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
         </div>
       </details>
     `;
