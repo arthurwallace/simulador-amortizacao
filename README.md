@@ -8,19 +8,26 @@ Projetada especialmente para publicação imediata no **Cloudflare Pages** (ou V
 
 ## 🚀 Principais Características
 
-- **Mesma API Oficial**: Conecta-se diretamente aos serviços da API do `simuladoramortizacao.com.br` com suporte a cálculo resiliente local de contingência (caso a rede esteja indisponível).
+- **📋 Acompanhamento Real do Financiamento & Extrato Oficial**:
+  - Registre cada amortização extra e cada parcela paga no dia a dia.
+  - Painel com KPIs em tempo real: Saldo devedor real hoje, total amortizado (regular vs extras), total desembolsado ao banco e parcelas restantes.
+  - Edite ou exclua qualquer lançamento com recálculo automático de todo o histórico.
+- **⚡ Cálculo Preciso de Juros Pró-rata e TR Intra-mês**:
+  - Replicada a metodologia bancária oficial (modelo Itaú / SAC): quando você amortiza ao longo do mês (fora do dia de vencimento), o sistema calcula os dias decorridos no ciclo e estima os juros pró-rata e atualização monetária proporcional.
+  - Permite ajuste fino dos centavos diretamente no lançamento.
+- **📄 Leitor Automático de PDF (DDC Itaú / Extratos Bancários)**:
+  - Faça o upload do arquivo PDF do Demonstrativo Descritivo de Crédito (DDC) do seu banco.
+  - Extração automática no próprio navegador (100% privado, sem enviar para servidores externos): lê número do contrato, parcelas pagas, novas amortizações realizadas e encargos.
+- **🔍 Reconciliação & Análise de Divergências**:
+  - Compara os dados do extrato PDF com o que está cadastrado no sistema.
+  - Mostra tela comparativa lado a lado e permite escolher item por item: atualizar com os dados do arquivo PDF ou manter os dados manuais.
+- **Mesma API Oficial & Motor Local Resiliente**: Conecta-se diretamente aos serviços da API do `simuladoramortizacao.com.br` com suporte a cálculo resiliente local de contingência (caso a rede esteja indisponível).
 - **Sem Telefone e Sem E-mail**: Removida qualquer barreira de captura de dados ou pop-ups de cadastro. Total privacidade.
 - **Armazenamento e Acesso Futuro**:
-  - Salva automaticamente todos os dados e amortizações configuradas no `localStorage`.
-  - **Gerenciador de Cenários**: Salve múltiplos cenários (ex.: "Caixa 35 anos", "Cenário Amortização R$ 2.800/mês", etc.).
-  - Backup e restauração via exportação/importação de arquivo JSON.
-- **Seus Dados Já Pré-configurados**: O aplicativo já inicializa com a simulação completa de 16 planos (Financiamento R$ 228.000, 420 parcelas, taxa 12,19% a.a., taxa mensal R$ 40, correção TR 0,17% e todas as suas amortizações planejadas).
-- **Ultraleve (< 110 KB no total)**:
-  - Zero dependências pesadas (`node_modules`).
-  - Sem trackers pesados de publicidade ou scripts invasivos (removidos Clarity, GTM, Ads e Pixels).
-  - Gráficos vetoriais SVG de alta resolução integrados com zero bloatware.
+  - Salva automaticamente todos os dados, histórico real e amortizações configuradas no `localStorage`.
+  - **Gerenciador de Cenários**: Salve múltiplos cenários e exporte/importe backups completos em JSON.
 - **Exportação e Impressão**:
-  - Download instantâneo de planilha CSV completa das parcelas.
+  - Download instantâneo de planilha CSV do extrato real e das parcelas projetadas.
   - Layout otimizado para impressão/PDF (`Ctrl + P`).
 - **Design Moderno e Responsivo**:
   - Modo Escuro (Dark Mode) e Modo Claro.

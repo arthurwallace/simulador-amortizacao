@@ -223,7 +223,7 @@ let appState = {
   ...DEFAULT_USER_SCENARIO,
   result: null,
   activeTableTab: 'withAmort', // 'withAmort' | 'withoutAmort'
-  activeMainTab: localStorage.getItem('simulador_active_main_tab') || 'nextActions',
+  activeMainTab: localStorage.getItem('simulador_active_main_tab') || 'realLedger',
   nextActionsHorizon: 6,
   tablePage: 1,
   tablePageSize: 50,
@@ -1626,13 +1626,18 @@ window.deleteScenario = function(encodedKey) {
 
 window.exportBackupJson = function() {
   const scenarios = getSavedScenarios();
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(scenarios, null, 2));
+  const backupData = {
+    scenarios: scenarios,
+    realLedger: window.realLedgerState || null
+  };
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
   const dlAnchor = document.createElement('a');
   dlAnchor.setAttribute('href', dataStr);
   dlAnchor.setAttribute('download', `backup_cenarios_amortizacao_${new Date().toISOString().slice(0, 10)}.json`);
   document.body.appendChild(dlAnchor);
   dlAnchor.click();
   dlAnchor.remove();
+  showToast('Backup completo (Cenários + Extrato Real) exportado!', 'success');
 };
 
 window.importBackupJson = function(event) {
@@ -1643,11 +1648,22 @@ window.importBackupJson = function(event) {
     try {
       const imported = JSON.parse(e.target.result);
       if (typeof imported === 'object') {
+        let scenariosToMerge = imported;
+        if (imported.scenarios && typeof imported.scenarios === 'object') {
+          scenariosToMerge = imported.scenarios;
+        }
         const current = getSavedScenarios();
-        const merged = { ...current, ...imported };
+        const merged = { ...current, ...scenariosToMerge };
         localStorage.setItem(STORAGE_KEYS.SCENARIOS, JSON.stringify(merged));
         renderScenariosList();
-        showToast('Cenários importados com sucesso!', 'success');
+
+        if (imported.realLedger && Array.isArray(imported.realLedger.transactions)) {
+          window.realLedgerState = imported.realLedger;
+          localStorage.setItem('amort_real_ledger_v2', JSON.stringify(imported.realLedger));
+          if (window.renderRealLedger) window.renderRealLedger();
+        }
+
+        showToast('Cenários e histórico importados com sucesso!', 'success');
       }
     } catch (err) {
       alert('Arquivo JSON inválido.');
@@ -1776,9 +1792,10 @@ window.switchMainTab = function(tabName) {
 };
 
 function updateMainTabsView() {
-  const tabName = appState.activeMainTab || 'nextActions';
+  const tabName = appState.activeMainTab || 'realLedger';
 
   const tabButtons = {
+    realLedger: document.getElementById('tabBtnRealLedger'),
     nextActions: document.getElementById('tabBtnNextActions'),
     overview: document.getElementById('tabBtnOverview'),
     inputs: document.getElementById('tabBtnInputs'),
@@ -1790,6 +1807,7 @@ function updateMainTabsView() {
     if (btn) btn.classList.toggle('active', key === tabName);
   });
 
+  const pReal = document.getElementById('panelRealLedger');
   const pNext = document.getElementById('panelNextActions');
   const sHero = document.getElementById('achievementHero') || document.getElementById('sectionHeroStats');
   const sComp = document.getElementById('comparisonContainer') || document.getElementById('sectionComparisonCards');
@@ -1803,7 +1821,19 @@ function updateMainTabsView() {
     if (el) el.style.display = isVisible ? '' : 'none';
   }
 
-  if (tabName === 'nextActions') {
+  if (tabName === 'realLedger') {
+    setVisible(pReal, true);
+    setVisible(pNext, false);
+    setVisible(sHero, false);
+    setVisible(sComp, false);
+    setVisible(sCharts, false);
+    setVisible(sInputs, false);
+    setVisible(sPlans, false);
+    setVisible(sTable, false);
+    setVisible(sEdu, false);
+    if (window.renderRealLedger) window.renderRealLedger();
+  } else if (tabName === 'nextActions') {
+    setVisible(pReal, false);
     setVisible(pNext, true);
     setVisible(sHero, false);
     setVisible(sComp, false);
@@ -1814,6 +1844,7 @@ function updateMainTabsView() {
     setVisible(sEdu, false);
     renderNextActions();
   } else if (tabName === 'overview') {
+    setVisible(pReal, false);
     setVisible(pNext, false);
     setVisible(sHero, true);
     setVisible(sComp, true);
@@ -1824,6 +1855,7 @@ function updateMainTabsView() {
     setVisible(sEdu, false);
     renderResults();
   } else if (tabName === 'inputs') {
+    setVisible(pReal, false);
     setVisible(pNext, false);
     setVisible(sHero, false);
     setVisible(sComp, false);
@@ -1833,6 +1865,7 @@ function updateMainTabsView() {
     setVisible(sTable, false);
     setVisible(sEdu, false);
   } else if (tabName === 'table') {
+    setVisible(pReal, false);
     setVisible(pNext, false);
     setVisible(sHero, false);
     setVisible(sComp, false);
@@ -1843,6 +1876,7 @@ function updateMainTabsView() {
     setVisible(sEdu, false);
     renderDetailedTable();
   } else if (tabName === 'all') {
+    setVisible(pReal, true);
     setVisible(pNext, true);
     setVisible(sInputs, true);
     setVisible(sPlans, true);
@@ -1851,6 +1885,7 @@ function updateMainTabsView() {
     setVisible(sCharts, true);
     setVisible(sTable, true);
     setVisible(sEdu, true);
+    if (window.renderRealLedger) window.renderRealLedger();
     renderNextActions();
     renderResults();
   }
@@ -2188,6 +2223,7 @@ function renderAll() {
   renderPlansList();
   renderResults();
   renderNextActions();
+  if (window.renderRealLedger) window.renderRealLedger();
   updateMainTabsView();
 }
 
@@ -2198,6 +2234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   syncFormInputsFromState();
   attachFormListeners();
   renderPlansList();
+  if (window.renderRealLedger) window.renderRealLedger();
   updateMainTabsView();
 
   // Initial Calculation with stored data
