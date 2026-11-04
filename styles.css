@@ -3629,6 +3629,193 @@ img, svg, canvas {
   background: rgba(56, 189, 248, 0.1);
 }
 
+/* ==========================================================================
+   COLLAPSIBLE PLANS GROUPS (Passadas, Futuras & Taxas/Correções)
+   ========================================================================== */
+
+.plans-group-collapse {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: var(--transition);
+  margin-bottom: 0.85rem;
+}
+
+.plans-group-collapse:hover {
+  border-color: var(--primary-500);
+}
+
+.plans-group-collapse[open] {
+  box-shadow: var(--shadow-md);
+}
+
+.plans-group-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition);
+  list-style: none;
+}
+
+.plans-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.plans-group-summary:hover {
+  background: var(--bg-card-subtle);
+}
+
+.plans-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.plans-summary-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.plans-summary-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.plans-summary-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.plans-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.plans-summary-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--primary-600);
+}
+
+.plans-chevron {
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+}
+
+.plans-group-collapse[open] > .plans-group-summary .plans-chevron {
+  transform: rotate(180deg);
+}
+
+.plans-group-body {
+  padding: 0.85rem 1rem 1rem 1rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-page);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Sub-collapses inside Taxas & Correções */
+.plans-sub-collapse {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.plans-sub-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  list-style: none;
+  transition: var(--transition);
+}
+
+.plans-sub-summary::-webkit-details-marker {
+  display: none;
+}
+
+.plans-sub-summary:hover {
+  background: var(--bg-card-subtle);
+}
+
+.plans-sub-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+}
+
+.plans-sub-body {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-page);
+}
+
+.plans-empty-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
+/* Dark mode tweaks for collapsible plans */
+[data-theme="dark"] .plans-group-collapse {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .plans-group-summary {
+  background: var(--bg-card);
+}
+
+[data-theme="dark"] .plans-group-summary:hover {
+  background: var(--bg-card-subtle);
+}
+
+[data-theme="dark"] .plans-group-body,
+[data-theme="dark"] .plans-sub-body {
+  background: var(--bg-page);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .plans-sub-collapse {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .plans-sub-summary {
+  background: var(--bg-card);
+}
+
+[data-theme="dark"] .plans-sub-summary:hover {
+  background: var(--bg-card-subtle);
+}
+
+
 
 
 

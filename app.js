@@ -800,6 +800,55 @@ function getOverlappingPlansForPlan(plan, planIndex) {
 }
 
 // Plan Management Rendering
+function renderPlanCard(p, origIndex) {
+  let badgeClass = 'plan-badge-term';
+  let badgeLabel = 'PRAZO';
+  let desc = '';
+  let extraBadgesHtml = '';
+
+  if (p.type === 'amortization') {
+    const isRecurr = p.frequency > 0;
+    badgeClass = isRecurr ? 'plan-badge-term' : 'plan-badge-installment';
+    badgeLabel = isRecurr ? 'RECORRENTE' : 'PONTUAL';
+    const freqText = isRecurr ? `a cada ${p.frequency} mês até parcela <b>${p.lastPayment}</b>` : '';
+    const targetLabel = p.subType === 'installment' ? '(reduz parcela)' : '(reduz prazo)';
+    desc = `Amortizando <span class="plan-val">${fmt.currency(p.value)}</span> por prazo a partir da parcela <b>${p.firstPayment}</b> ${freqText}`;
+
+    const overlaps = getOverlappingPlansForPlan(p, origIndex);
+    if (overlaps.length > 0) {
+      const sharedParcels = overlaps.map(o => `mês ${o.parcel}`).join(', ');
+      extraBadgesHtml += `<span class="plan-badge plan-badge-accumulate" title="Soma com outra amortização no mesmo mês">⚡ Acumula no ${sharedParcels}</span>`;
+    }
+  } else if (p.type === 'fee') {
+    badgeClass = 'plan-badge-fee';
+    badgeLabel = 'TAXA / SEGURO';
+    desc = `Taxa mensal de <span class="plan-val">${fmt.currency(p.value)}</span> da parcela <b>${p.firstPayment}</b> até <b>${p.lastPayment}</b>`;
+  } else if (p.type === 'correction') {
+    badgeClass = 'plan-badge-correction';
+    badgeLabel = 'CORREÇÃO';
+    const freqText = p.frequency > 1 ? `a cada ${p.frequency} meses` : 'mensal';
+    desc = `Correção de <span class="plan-val">${fmt.percent(p.value)}</span> (${freqText}) da parcela <b>${p.firstPayment}</b> até <b>${p.lastPayment}</b>`;
+  }
+
+  return `
+    <div class="plan-item" data-plan-id="${p.id || origIndex}">
+      <div class="plan-desc">
+        <span class="plan-badge ${badgeClass}">${badgeLabel}</span>
+        ${extraBadgesHtml}
+        <span>${desc}</span>
+      </div>
+      <div class="plan-item-actions">
+        <button class="btn btn-icon btn-ghost" onclick="editPlan(${origIndex})" title="Editar plano">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+        <button class="btn btn-icon btn-danger-ghost" onclick="deletePlan(${origIndex})" title="Excluir plano">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
 function renderPlansList() {
   const container = document.getElementById('plansListContainer');
   const countBadge = document.getElementById('plansCountBadge');
@@ -817,58 +866,122 @@ function renderPlansList() {
     return;
   }
 
+  // Mapear planos com seu índice original em appState.plans
+  const mapped = appState.plans.map((p, idx) => ({ plan: p, origIndex: idx }));
+
+  // Divisão entre Amortizações Extras e Taxas/Correções
+  const amortPlans = mapped.filter(item => item.plan.type === 'amortization');
+  const feeAndCorrPlans = mapped.filter(item => item.plan.type === 'fee' || item.plan.type === 'correction');
+
+  // Amortizações: Passadas (<= parcela 20) vs Futuras (> parcela 20)
+  const pastAmorts = amortPlans.filter(item => item.plan.firstPayment <= 20 && item.plan.lastPayment <= 20);
+  const futureAmorts = amortPlans.filter(item => !(item.plan.firstPayment <= 20 && item.plan.lastPayment <= 20));
+
+  // Taxas e Correções: Passadas (<= parcela 20) vs Futuras (> parcela 20)
+  const pastFeesAndCorrs = feeAndCorrPlans.filter(item => item.plan.firstPayment <= 20 && item.plan.lastPayment <= 20);
+  const futureFeesAndCorrs = feeAndCorrPlans.filter(item => !(item.plan.firstPayment <= 20 && item.plan.lastPayment <= 20));
+
   let html = '';
-  appState.plans.forEach((p, idx) => {
-    let badgeClass = 'plan-badge-term';
-    let badgeLabel = 'PRAZO';
-    let desc = '';
-    let extraBadgesHtml = '';
 
-    if (p.type === 'amortization') {
-      const isRecurr = p.frequency > 0;
-      badgeClass = isRecurr ? 'plan-badge-term' : 'plan-badge-installment';
-      badgeLabel = isRecurr ? 'RECORRENTE' : 'PONTUAL';
-      const freqText = isRecurr ? `a cada ${p.frequency} mês até parcela <b>${p.lastPayment}</b>` : '';
-      const targetLabel = p.subType === 'installment' ? '(reduz parcela)' : '(reduz prazo)';
-      desc = `Amortizando <span class="plan-val">${fmt.currency(p.value)}</span> por prazo a partir da parcela <b>${p.firstPayment}</b> ${freqText}`;
-
-      const overlaps = getOverlappingPlansForPlan(p, idx);
-      if (overlaps.length > 0) {
-        const sharedParcels = overlaps.map(o => `mês ${o.parcel}`).join(', ');
-        extraBadgesHtml += `<span class="plan-badge plan-badge-accumulate" title="Soma com outra amortização no mesmo mês">⚡ Acumula no ${sharedParcels}</span>`;
-      }
-    } else if (p.type === 'fee') {
-      badgeClass = 'plan-badge-fee';
-      badgeLabel = 'TAXA / SEGURO';
-      desc = `Taxa mensal de <span class="plan-val">${fmt.currency(p.value)}</span> da parcela <b>${p.firstPayment}</b> até <b>${p.lastPayment}</b>`;
-    } else if (p.type === 'correction') {
-      badgeClass = 'plan-badge-correction';
-      badgeLabel = 'CORREÇÃO';
-      const freqText = p.frequency > 1 ? `a cada ${p.frequency} meses` : 'mensal';
-      desc = `Correção de <span class="plan-val">${fmt.percent(p.value)}</span> (${freqText}) da parcela <b>${p.firstPayment}</b> até <b>${p.lastPayment}</b>`;
-    }
-
+  // 1. COLLAPSE: AMORTIZAÇÕES EXTRAS FUTURAS (ABERTO POR PADRÃO)
+  if (futureAmorts.length > 0) {
     html += `
-      <div class="plan-item" data-plan-id="${p.id || idx}">
-        <div class="plan-desc">
-          <span class="plan-badge ${badgeClass}">${badgeLabel}</span>
-          ${extraBadgesHtml}
-          <span>${desc}</span>
+      <details class="plans-group-collapse" open id="collapseFutureAmorts">
+        <summary class="plans-group-summary">
+          <div class="plans-summary-left">
+            <span class="plans-summary-icon">🎯</span>
+            <div>
+              <div class="plans-summary-title">Amortizações Extras Futuras (Planejadas)</div>
+              <div class="plans-summary-sub">Aportes recorrentes e pontuais a partir da parcela #21</div>
+            </div>
+          </div>
+          <div class="plans-summary-right">
+            <span class="plans-summary-count">${futureAmorts.length} plano(s)</span>
+            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <div class="plans-group-body">
+          ${futureAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
         </div>
-        <div class="plan-item-actions">
-          <button class="btn btn-icon btn-ghost" onclick="editPlan(${idx})" title="Editar plano">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          </button>
-          <button class="btn btn-icon btn-danger-ghost" onclick="deletePlan(${idx})" title="Excluir plano">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
-        </div>
-      </div>
+      </details>
     `;
-  });
+  }
+
+  // 2. COLLAPSE: AMORTIZAÇÕES EXTRAS PASSADAS (INICIALMENTE FECHADO - SEM 'open')
+  if (pastAmorts.length > 0) {
+    html += `
+      <details class="plans-group-collapse" id="collapsePastAmorts">
+        <summary class="plans-group-summary">
+          <div class="plans-summary-left">
+            <span class="plans-summary-icon">📜</span>
+            <div>
+              <div class="plans-summary-title">Amortizações Extras Passadas (Histórico / Realizadas)</div>
+              <div class="plans-summary-sub">Amortizações já executadas (parcelas #1 a #20) • Clique para expandir</div>
+            </div>
+          </div>
+          <div class="plans-summary-right">
+            <span class="plans-summary-count" style="background: var(--bg-card-subtle); color: var(--text-muted);">${pastAmorts.length} plano(s)</span>
+            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <div class="plans-group-body">
+          ${pastAmorts.map(i => renderPlanCard(i.plan, i.origIndex)).join('')}
+        </div>
+      </details>
+    `;
+  }
+
+  // 3. COLLAPSE: TAXAS E CORREÇÕES MONETÁRIAS (COM PASSADAS E FUTURAS)
+  if (feeAndCorrPlans.length > 0) {
+    html += `
+      <details class="plans-group-collapse" open id="collapseFeesAndCorr">
+        <summary class="plans-group-summary">
+          <div class="plans-summary-left">
+            <span class="plans-summary-icon">⚙️</span>
+            <div>
+              <div class="plans-summary-title">Taxas e Correções Monetárias (Seguros & TR)</div>
+              <div class="plans-summary-sub">Encargos mensais de seguros (MIP/DFI) e taxas de correção (TR)</div>
+            </div>
+          </div>
+          <div class="plans-summary-right">
+            <span class="plans-summary-count">${feeAndCorrPlans.length} plano(s)</span>
+            <svg class="plans-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <div class="plans-group-body">
+          <!-- Sub-collapse: Futuras / Projetadas (ABERTO por padrão) -->
+          <details class="plans-sub-collapse" open>
+            <summary class="plans-sub-summary">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--primary-600);">🔮 Taxas e Seguros Projetados (Futuros - a partir da #21)</span>
+              <span class="plans-sub-count">${futureFeesAndCorrs.length} plano(s)</span>
+            </summary>
+            <div class="plans-sub-body">
+              ${futureFeesAndCorrs.length > 0
+                ? futureFeesAndCorrs.map(i => renderPlanCard(i.plan, i.origIndex)).join('')
+                : '<p class="plans-empty-text">Nenhuma taxa futura cadastrada.</p>'}
+            </div>
+          </details>
+
+          <!-- Sub-collapse: Passadas / Históricas (INICIALMENTE FECHADO - SEM 'open') -->
+          <details class="plans-sub-collapse">
+            <summary class="plans-sub-summary">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-muted);">📜 Taxas e Seguros Históricos (Passados - Parcelas #1 a #20)</span>
+              <span class="plans-sub-count">${pastFeesAndCorrs.length} plano(s)</span>
+            </summary>
+            <div class="plans-sub-body">
+              ${pastFeesAndCorrs.length > 0
+                ? pastFeesAndCorrs.map(i => renderPlanCard(i.plan, i.origIndex)).join('')
+                : '<p class="plans-empty-text">Nenhuma taxa passada cadastrada.</p>'}
+            </div>
+          </details>
+        </div>
+      </details>
+    `;
+  }
 
   container.innerHTML = html;
 }
+window.renderPlansList = renderPlansList;
 
 window.deletePlan = function(index) {
   appState.plans.splice(index, 1);
@@ -1576,6 +1689,7 @@ function renderScenariosList() {
   });
   container.innerHTML = html;
 }
+window.renderPlansList = renderPlansList;
 
 window.saveNewScenarioPrompt = function() {
   const name = prompt('Informe um nome para o cenário:', appState.name || 'Meu Cenário');

@@ -155,6 +155,37 @@ async function runTestSuite() {
   if (diffsDetected.length < 2) throw new Error('Deveria ter detectado as divergências');
   console.log('✅ Teste 4 passou com sucesso! Divergências identificadas e prontas para reconciliação!\n');
 
+  // Teste 5: Collapse de Planos (Passadas, Futuras, Taxas e Correções)
+  console.log('--- Teste 5: Collapse de Amortizações e Taxas (Passadas e Futuras) ---');
+  let renderedHtml = '';
+  global.document.getElementById = (id) => {
+    return {
+      set textContent(v) {},
+      set innerHTML(html) {
+        if (id === 'plansListContainer') renderedHtml = html;
+      }
+    };
+  };
+
+  require('./app.js');
+  window.renderPlansList();
+
+  const hasFutureAmortOpen = renderedHtml.includes('<details class="plans-group-collapse" open id="collapseFutureAmorts">');
+  const hasPastAmortClosed = renderedHtml.includes('<details class="plans-group-collapse" id="collapsePastAmorts">');
+  const hasFeesAndCorrOpen = renderedHtml.includes('<details class="plans-group-collapse" open id="collapseFeesAndCorr">');
+  const hasSubFutureOpen = renderedHtml.includes('🔮 Taxas e Seguros Projetados');
+  const hasSubPastClosed = renderedHtml.includes('📜 Taxas e Seguros Históricos');
+
+  console.log('Amortizações Futuras aberta por padrão:', hasFutureAmortOpen);
+  console.log('Amortizações Passadas FECHADA por padrão:', hasPastAmortClosed);
+  console.log('Taxas e Correções aberta por padrão:', hasFeesAndCorrOpen);
+  console.log('Taxas Futuras e Passadas organizadas:', hasSubFutureOpen && hasSubPastClosed);
+
+  if (!hasFutureAmortOpen || !hasPastAmortClosed || !hasFeesAndCorrOpen) {
+    throw new Error('Falha na estrutura de collapse dos planos');
+  }
+  console.log('✅ Teste 5 passou com sucesso! Seções colapsáveis configuradas corretamente!\n');
+
   console.log('🎉 TODOS OS TESTES PASSARAM COM 100% DE SUCESSO! 🎉');
 }
 
