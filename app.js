@@ -455,8 +455,7 @@ async function fetchSimulationData() {
     // Execução instantânea local no navegador (0ms de latência, offline-first)
     const localData = runLocalSimulation(payload);
     appState.result = localData.data;
-    updateApiStatusBadge(true);
-    showToast('Simulação calculada com motor local nativo!', 'success');
+    showToast('Simulação calculada com sucesso!', 'success');
   } catch (err) {
     console.error('Erro ao calcular simulação local:', err);
     showToast('Erro ao realizar cálculo da simulação.', 'error');
@@ -471,11 +470,8 @@ async function fetchSimulationData() {
 }
 
 // UI Updating & Rendering
-function updateApiStatusBadge(isOnline = true) {
-  const badge = document.getElementById('apiStatusBadge');
-  if (!badge) return;
-  badge.innerHTML = `<span class="pulse-dot" style="background-color: var(--success-500)"></span> <span>Motor 100% Offline</span>`;
-  badge.title = 'Motor financeiro nativo integrado 100% independente e offline (precisão centesimal e fidelidade bancária)';
+function updateApiStatusBadge() {
+  // Badge removido a pedido do usuário
 }
 
 function showToast(msg, type = 'info') {
