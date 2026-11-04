@@ -952,12 +952,14 @@ window.onRealAmortDateOrAmountChange = function() {
   if (badge) {
     if (calc.days === 0) {
       badge.textContent = 'Dia de Vencimento (0 dias de juros)';
-      badge.style.background = 'rgba(16, 185, 129, 0.15)';
-      badge.style.color = 'var(--success-700)';
+      badge.className = 'pro-rata-cycle-badge badge-success';
+      badge.style.background = '';
+      badge.style.color = '';
     } else {
       badge.textContent = `${calc.days} dia(s) no ciclo (${window.fmt.dateISOToBR(calc.baseDateStr)})`;
-      badge.style.background = 'rgba(245, 158, 11, 0.15)';
-      badge.style.color = 'var(--warning-700)';
+      badge.className = 'pro-rata-cycle-badge badge-warning';
+      badge.style.background = '';
+      badge.style.color = '';
     }
   }
 
@@ -1302,7 +1304,7 @@ window.renderRealLedger = function() {
       <div class="real-kpi-card highlight">
         <div class="real-kpi-top">
           <span class="real-kpi-title">Saldo Devedor Atual (Real)</span>
-          <span class="real-kpi-badge" style="background: rgba(37,99,235,0.12); color: var(--primary-700);">Oficial Itaú</span>
+          <span class="real-kpi-badge badge-primary">Oficial Itaú</span>
         </div>
         <div class="real-kpi-val" style="color: var(--primary-600);">
           ${window.fmt.currency(m.currentBalance)}
@@ -1325,7 +1327,7 @@ window.renderRealLedger = function() {
       <div class="real-kpi-card">
         <div class="real-kpi-top">
           <span class="real-kpi-title">Total Já Amortizado</span>
-          <span class="real-kpi-badge" style="background: rgba(16,185,129,0.12); color: var(--success-700);">Abatimento Real</span>
+          <span class="real-kpi-badge badge-success">Abatimento Real</span>
         </div>
         <div class="real-kpi-val" style="color: var(--success-600);">
           ${window.fmt.currency(m.totalAmortized)}
@@ -1340,7 +1342,7 @@ window.renderRealLedger = function() {
       <div class="real-kpi-card">
         <div class="real-kpi-top">
           <span class="real-kpi-title">Total Desembolsado ao Banco</span>
-          <span class="real-kpi-badge">Fluxo de Caixa</span>
+          <span class="real-kpi-badge badge-neutral">Fluxo de Caixa</span>
         </div>
         <div class="real-kpi-val">
           ${window.fmt.currency(m.totalDisbursed)}
@@ -1356,7 +1358,7 @@ window.renderRealLedger = function() {
       <div class="real-kpi-card">
         <div class="real-kpi-top">
           <span class="real-kpi-title">O Que Falta no Contrato</span>
-          <span class="real-kpi-badge" style="background: rgba(245,158,11,0.15); color: var(--warning-700);">Prazo Restante</span>
+          <span class="real-kpi-badge badge-warning">Prazo Restante</span>
         </div>
         <div class="real-kpi-val" style="color: var(--warning-600);">
           ${m.remainingTerm} parcelas

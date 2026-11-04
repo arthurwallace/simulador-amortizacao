@@ -103,8 +103,8 @@
     <section class="card-panel real-ledger-panel" id="panelRealLedger" style="display: none;">
       <div class="real-ledger-header">
         <div class="next-actions-title-wrap">
-          <div class="next-actions-badge" style="background: rgba(16, 185, 129, 0.12); color: var(--success-600); border-color: rgba(16, 185, 129, 0.3);">
-            <span class="pulse-dot active" style="background: var(--success-500);"></span>
+          <div class="real-header-badge">
+            <span class="pulse-dot active"></span>
             <span>Controle Oficial & Registro Real</span>
           </div>
           <h2 class="next-actions-title">
@@ -118,11 +118,11 @@
         <div class="real-ledger-actions-group">
           <button type="button" class="btn btn-success btn-sm" onclick="openRealAmortizationModal()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            + Lançar Amortização Extra
+            Lançar Amortização Extra
           </button>
           <button type="button" class="btn btn-primary btn-sm" onclick="openRealInstallmentModal()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            + Lançar Pagamento de Parcela
+            Lançar Pagamento de Parcela
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="openPdfUploadModal()" title="Ler extrato PDF do banco (DDC) automaticamente">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
@@ -356,15 +356,15 @@
         <div class="plan-actions-group">
           <button type="button" class="btn btn-success btn-sm" onclick="openAmortizationModal()" id="btnAddAmort">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            + Amortização Extra
+            Amortização Extra
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="openFeeModal()" id="btnAddFee">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            + Taxa / Seguro
+            Taxa / Seguro
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="openCorrectionModal()" id="btnAddCorr">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            + Correção (TR)
+            Correção (TR)
           </button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="restoreDefaultScenario()" title="Restaurar simulação de 16 planos">
             Restaurar Padrão
