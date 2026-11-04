@@ -273,6 +273,14 @@ const fmt = {
   }
 };
 
+// Garantir disponibilidade global de formatadores para todos os módulos
+if (typeof window !== 'undefined') {
+  window.fmt = fmt;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.fmt = fmt;
+}
+
 // Local Storage Handlers
 function saveCurrentStateToStorage() {
   try {
@@ -2171,6 +2179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 if (typeof window !== 'undefined') {
+  window.fmt = fmt;
   window.runLocalSimulation = runLocalSimulation;
   window.buildApiPayload = buildApiPayload;
   window.fetchSimulationData = fetchSimulationData;
@@ -2180,6 +2189,7 @@ if (typeof window !== 'undefined') {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    fmt,
     runLocalSimulation,
     buildApiPayload,
     fetchSimulationData,

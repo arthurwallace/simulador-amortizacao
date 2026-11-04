@@ -110,6 +110,10 @@ async function runTestSuite() {
   if (m.paidInstallmentsCount !== 20) throw new Error('Deveria ter 20 parcelas pagas');
   if (m.currentBalance !== 135310.81) throw new Error('Saldo devedor final deveria ser 135.310,81');
   if (m.remainingTerm !== 98) throw new Error('Prazo restante deveria ser 98 meses');
+
+  // Testar renderRealLedger para certificar que fmt.currency está 100% definido e funcional
+  window.renderRealLedger();
+  console.log('Renderização do Real Ledger executou com sucesso (sem erros de fmt.currency)!');
   console.log('✅ Teste 2 passou com sucesso! Saldo e KPIs bateram 100% com o Itaú!\n');
 
   // Teste 3: Parser do Extrato PDF

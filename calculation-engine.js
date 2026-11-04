@@ -23,6 +23,9 @@
     root.CalculationEngine = engine;
     root.runLocalSimulation = engine.simulate;
     root.calcProRataForDate = engine.calcProRataForDate;
+    if (!root.fmt) {
+      root.fmt = engine.Formatters;
+    }
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
@@ -437,14 +440,57 @@
   }
 
   // ---------------------------------------------------------------------------
+  // 6. FORMATADORES UNIVERSAIS SEGUROS
+  // ---------------------------------------------------------------------------
+  const Formatters = {
+    currency(val) {
+      if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    },
+    currencyCompact(val) {
+      if (val === null || val === undefined || isNaN(val)) return 'R$ 0';
+      if (val >= 1000000) return 'R$ ' + (val / 1000000).toFixed(1).replace('.', ',') + 'M';
+      if (val >= 1000) return 'R$ ' + (val / 1000).toFixed(0) + 'k';
+      return Formatters.currency(val);
+    },
+    number(val, decimals = 2) {
+      if (val === null || val === undefined || isNaN(val)) return '0,00';
+      return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(val);
+    },
+    percent(val) {
+      return `${Formatters.number(val, 2)}%`;
+    },
+    parseCurrency(str) {
+      if (typeof str === 'number') return str;
+      if (!str) return 0;
+      const clean = String(str).replace(/[^\d]/g, '');
+      return clean ? parseFloat(clean) / 100 : 0;
+    },
+    dateISOToMonthYear(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      return `${months[d.getUTCMonth()]}/${d.getUTCFullYear()}`;
+    },
+    dateISOToBR(iso) {
+      if (!iso) return '-';
+      const parts = String(iso).split('T')[0].split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return String(iso);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // EXPOSIÇÃO DO MÓDULO
   // ---------------------------------------------------------------------------
   return {
     version: '3.0.0',
     RateUtils,
     MortgageFormulas,
+    Formatters,
     calcProRataForDate,
     simulate,
     calculateSavings
   };
 });
+

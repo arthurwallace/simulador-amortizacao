@@ -2,6 +2,33 @@ if (typeof window === 'undefined') {
   global.window = global;
 }
 
+// Formatador seguro global/local (garante execução independente de ordem de carregamento)
+const fmt = (typeof window !== 'undefined' && window.fmt) ? window.fmt : {
+  currency: (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  },
+  number: (val, decimals = 2) => {
+    if (val === null || val === undefined || isNaN(val)) return '0,00';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(val);
+  },
+  parseCurrency: (str) => {
+    if (typeof str === 'number') return str;
+    if (!str) return 0;
+    const clean = String(str).replace(/[^\d]/g, '');
+    return clean ? parseFloat(clean) / 100 : 0;
+  },
+  dateISOToBR: (iso) => {
+    if (!iso) return '-';
+    const parts = String(iso).split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return String(iso);
+  }
+};
+if (typeof window !== 'undefined' && !window.fmt) {
+  window.fmt = fmt;
+}
+
 /**
  * SIMULADOR DE AMORTIZAÇÃO - MÓDULO DE ACOMPANHAMENTO REAL & EXTRATO OFICIAL
  * Controle de parcelas pagas, amortizações extras intra-mês com cálculo de juros pró-rata
