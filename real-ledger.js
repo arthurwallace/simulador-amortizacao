@@ -834,8 +834,21 @@ function recalculateRealLedger() {
 
 /**
  * Cálculo inteligente de Juros Pró-rata e TR proporcional intra-mês (Fórmula Oficial Itaú)
+ * Delegado ao módulo puro calculation-engine.js
  */
 function calcProRataForDate(amortDateStr, amount, customMonthlyRate, customTrRate) {
+  const engine = (typeof CalculationEngine !== 'undefined' && CalculationEngine.calcProRataForDate)
+    ? CalculationEngine
+    : (typeof require === 'function' ? require('./calculation-engine.js') : null);
+
+  if (engine && engine.calcProRataForDate) {
+    const contract = window.realLedgerState?.contract || {};
+    const monthlyRate = (customMonthlyRate !== undefined && customMonthlyRate !== null)
+      ? customMonthlyRate
+      : (contract.interestRateMonthly || 0.9631393);
+    return engine.calcProRataForDate(amortDateStr, amount, monthlyRate, customTrRate, 26);
+  }
+
   if (!amortDateStr || !amount || amount <= 0) {
     return { days: 0, proRataInterest: 0, monetaryCorrection: 0, totalPaid: 0, baseDateStr: '-' };
   }

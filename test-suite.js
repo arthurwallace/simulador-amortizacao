@@ -41,11 +41,35 @@ global.fmt = {
 global.showToast = (msg, type) => console.log(`[TOAST ${type}] ${msg}`);
 global.closeModal = (id) => console.log(`[MODAL CLOSE] ${id}`);
 
-// Load real-ledger.js
+// Load calculation-engine.js & real-ledger.js
+const CalculationEngine = require('./calculation-engine.js');
+global.CalculationEngine = CalculationEngine;
 require('./real-ledger.js');
 
 async function runTestSuite() {
   console.log('=== INICIANDO TESTES DO SIMULADOR DE AMORTIZAÇÃO & EXTRATO REAL ===\n');
+
+  // Teste 0: Modularidade do Motor de Cálculo Financeiro (CalculationEngine)
+  console.log('--- Teste 0: Modularidade do CalculationEngine ---');
+  const mRate = CalculationEngine.RateUtils.annualEffectiveToMonthly(12.19);
+  console.log('Conversão 12.19% a.a. -> a.m.:', (mRate * 100).toFixed(7), '% (Esperado: 0.9631393%)');
+  if (Math.abs(mRate * 100 - 0.9631393) > 0.0001) throw new Error('Falha na conversão de taxa anual para mensal');
+
+  const aRate = CalculationEngine.RateUtils.monthlyToAnnualEffective(0.9631393);
+  console.log('Conversão reversa 0.9631393% a.m. -> a.a.:', aRate.toFixed(2), '% (Esperado: 12.19%)');
+  if (Math.abs(aRate - 12.19) > 0.01) throw new Error('Falha na conversão reversa');
+
+  // Teste de cálculo base SAC
+  const baseSac = CalculationEngine.MortgageFormulas.calcBaseInstallment({
+    isSAC: true,
+    balance: 228000,
+    remainingTerms: 420,
+    iMonthly: mRate
+  });
+  console.log('Parcela 1 SAC calculada pelo módulo:', baseSac.installmentAmount.toFixed(2));
+  if (Math.abs(baseSac.installmentAmount - 2738.83) > 0.5) throw new Error('Falha no cálculo base SAC do módulo');
+
+  console.log('✅ Teste 0 passou com sucesso! CalculationEngine modularizado e funcional!\n');
 
   // Teste 1: Cálculo de Juros Pró-rata e TR
   console.log('--- Teste 1: Cálculo Pró-rata Intra-mês ---');
