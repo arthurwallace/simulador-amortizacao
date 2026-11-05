@@ -3292,8 +3292,14 @@ img, svg, canvas {
 /* Real KPI Cards Grid */
 .real-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
+}
+
+@media (min-width: 1100px) {
+  .real-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .real-kpi-card {
@@ -3324,26 +3330,36 @@ img, svg, canvas {
 .real-kpi-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .real-kpi-title {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.035em;
   color: var(--text-muted);
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
 }
 
 .real-kpi-badge {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 0.2rem 0.55rem;
+  padding: 0.18rem 0.52rem;
   border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
   letter-spacing: 0.02em;
+  line-height: 1.2;
+  margin-top: 1px;
   background: var(--bg-card-subtle);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
