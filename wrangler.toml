@@ -1,4 +1,7 @@
 name = "simulador-amortizacao"
 compatibility_date = "2024-11-01"
-pages_build_output_dir = "."
+main = "_worker.js"
 
+[assets]
+directory = "."
+binding = "ASSETS"
