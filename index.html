@@ -719,7 +719,7 @@
         <button class="btn btn-icon btn-ghost" onclick="closeModal('modalScenarios')">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="scenarios-modal-topbar" style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 0.85rem; color: var(--text-muted);">Alterne facilmente entre diferentes cenários ou faça backup:</span>
           <button class="btn btn-sm btn-primary" onclick="saveNewScenarioPrompt()">+ Salvar Atual</button>
         </div>
@@ -728,7 +728,7 @@
           <!-- Rendered by app.js -->
         </div>
 
-        <div style="border-top: 1px dashed var(--border-color); padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
+        <div class="scenarios-backup-actions" style="border-top: 1px dashed var(--border-color); padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap;">
           <button type="button" class="btn btn-sm btn-secondary" onclick="exportBackupJson()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Exportar Backup JSON
@@ -751,7 +751,7 @@
             </div>
           </div>
           
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <div class="scenarios-global-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <label class="btn btn-sm btn-primary" style="cursor: pointer;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               Importar JSON e Virar Padrão Global
@@ -1078,7 +1078,7 @@
         </div>
 
         <!-- Manual Actions -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem;">
+        <div class="cloud-sync-buttons-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem;">
           <button type="button" class="btn btn-secondary" onclick="triggerManualCloudPull()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             Baixar da Nuvem
