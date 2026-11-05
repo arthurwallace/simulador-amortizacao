@@ -357,26 +357,67 @@ async function loadStateAndGlobalDefault() {
   }
 }
 
+function getDeletedScenarios() {
+  try {
+    const raw = localStorage.getItem('simulador_deleted_scenarios');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function markScenarioDeleted(name) {
+  const list = getDeletedScenarios();
+  if (!list.includes(name)) {
+    list.push(name);
+    localStorage.setItem('simulador_deleted_scenarios', JSON.stringify(list));
+  }
+}
+
+function unmarkScenarioDeleted(name) {
+  const list = getDeletedScenarios().filter(n => n !== name);
+  localStorage.setItem('simulador_deleted_scenarios', JSON.stringify(list));
+}
+
 function getSavedScenarios() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SCENARIOS);
+    const raw = localStorage.getItem(STORAGE_KEYS.SCENARIOS) || localStorage.getItem('simulador_scenarios');
     const customScenarios = raw ? JSON.parse(raw) : {};
-    return { ...PRESET_SCENARIOS, ...customScenarios, [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
+    const all = { ...PRESET_SCENARIOS, ...customScenarios, [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
+    const deleted = getDeletedScenarios();
+    deleted.forEach(delName => {
+      delete all[delName];
+    });
+    return all;
   } catch (e) {
     return { ...PRESET_SCENARIOS, [DEFAULT_USER_SCENARIO.name]: DEFAULT_USER_SCENARIO };
   }
 }
 
 function saveScenarioToStorage(name, scenarioData) {
+  unmarkScenarioDeleted(name);
   const scenarios = getSavedScenarios();
   scenarios[name] = { ...scenarioData, name, savedAt: new Date().toISOString() };
   localStorage.setItem(STORAGE_KEYS.SCENARIOS, JSON.stringify(scenarios));
+  localStorage.setItem('simulador_scenarios', JSON.stringify(scenarios));
+  if (window.cloudSync && typeof window.cloudSync.pushToCloud === 'function' && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 }
 
 function deleteScenarioFromStorage(name) {
-  const scenarios = getSavedScenarios();
-  delete scenarios[name];
-  localStorage.setItem(STORAGE_KEYS.SCENARIOS, JSON.stringify(scenarios));
+  markScenarioDeleted(name);
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SCENARIOS) || localStorage.getItem('simulador_scenarios');
+    const custom = raw ? JSON.parse(raw) : {};
+    delete custom[name];
+    localStorage.setItem(STORAGE_KEYS.SCENARIOS, JSON.stringify(custom));
+    localStorage.setItem('simulador_scenarios', JSON.stringify(custom));
+  } catch (e) {}
+
+  if (window.cloudSync && typeof window.cloudSync.pushToCloud === 'function' && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 }
 
 // Payload Constructor for simuladoramortizacao.com.br
@@ -384,6 +425,24 @@ function buildApiPayload() {
   const amortizations = {};
   const fees = {};
   const monetaryCorrections = {};
+
+  // O Real é sempre a fonte da verdade: mapear ciclos que já possuem amortizações reais confirmadas
+  const realAmortCycles = new Set();
+  const txs = window.realLedgerState?.transactions || [];
+  const contractStart = window.realLedgerState?.contract?.startDate || appState.date || '2025-02-26';
+
+  txs.filter(t => t.type === 'amortization' && t.status !== 'Cancelada').forEach(am => {
+    const cycle = (typeof window.getInstallmentCycleForDate === 'function')
+      ? window.getInstallmentCycleForDate(am.date, contractStart)
+      : Math.max(1, (new Date(am.date + 'T00:00:00').getFullYear() - new Date(contractStart + 'T00:00:00').getFullYear()) * 12 + (new Date(am.date + 'T00:00:00').getMonth() - new Date(contractStart + 'T00:00:00').getMonth()) + (new Date(am.date + 'T00:00:00').getDate() > new Date(contractStart + 'T00:00:00').getDate() ? 1 : 0));
+    realAmortCycles.add(cycle);
+  });
+
+  (appState.plans || []).forEach(p => {
+    if (p.isReal && p.type === 'amortization') {
+      realAmortCycles.add(Number(p.firstPayment));
+    }
+  });
 
   appState.plans.forEach(p => {
     if (p.type === 'fee') {
@@ -402,7 +461,8 @@ function buildApiPayload() {
       }
     } else if (p.type === 'amortization') {
       const isTerm = p.subType === 'term';
-      if (p.frequency === -1 || p.frequency === 0 || !p.frequency) {
+      const isPunctual = p.frequency === -1 || p.frequency === 0 || !p.frequency;
+      if (isPunctual) {
         const idx = Number(p.firstPayment);
         const existing = amortizations[idx]?.value || 0;
         amortizations[idx] = {
@@ -410,10 +470,14 @@ function buildApiPayload() {
           value: existing + Number(p.value)
         };
       } else {
+        // Plano recorrente: não soma com ciclo que já possui amortização real confirmada
         const start = Number(p.firstPayment);
         const end = Number(p.lastPayment);
         const freq = Number(p.frequency);
         for (let idx = start; idx <= end; idx += freq) {
+          if (realAmortCycles.has(idx)) {
+            continue; // O Real é soberano: não adiciona projeção teórica onde já houve aporte real
+          }
           const existing = amortizations[idx]?.value || 0;
           amortizations[idx] = {
             amortizationByTerm: isTerm,
@@ -856,6 +920,9 @@ window.restoreDefaultScenario = async function() {
       }
     } catch (e) {}
 
+    if (typeof unmarkScenarioDeleted === 'function' && DEFAULT_USER_SCENARIO.name) {
+      unmarkScenarioDeleted(DEFAULT_USER_SCENARIO.name);
+    }
     appState.plans = JSON.parse(JSON.stringify(DEFAULT_USER_SCENARIO.plans));
     appState.loanAmount = DEFAULT_USER_SCENARIO.loanAmount;
     appState.interestRate = DEFAULT_USER_SCENARIO.interestRate;
@@ -1506,10 +1573,11 @@ function renderScenariosList() {
             ${fmt.currency(sc.loanAmount)} • ${sc.amortizationSystemType === 0 ? 'SAC' : 'Price'} • ${sc.plans?.length || 0} planos
           </div>
         </div>
-        <div style="display: flex; gap: 0.35rem;">
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
           <button class="btn btn-sm btn-primary" onclick="loadScenario('${encodeURIComponent(k)}')">Carregar</button>
-          <button class="btn btn-sm btn-danger-ghost" onclick="deleteScenario('${encodeURIComponent(k)}')" title="Excluir cenário">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <button class="btn btn-sm btn-danger-ghost" onclick="deleteScenario('${encodeURIComponent(k)}')" title="Excluir este cenário" style="display: inline-flex; align-items: center; gap: 0.3rem; color: var(--danger-600); border-color: rgba(239, 68, 68, 0.25);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>Excluir</span>
           </button>
         </div>
       </div>
@@ -1560,9 +1628,19 @@ window.loadScenario = function(encodedKey) {
 
 window.deleteScenario = function(encodedKey) {
   const key = decodeURIComponent(encodedKey);
-  if (confirm(`Deseja excluir o cenário "${key}"?`)) {
+  if (confirm(`Deseja realmente excluir o cenário "${key}"?`)) {
     deleteScenarioFromStorage(key);
+    // Se o cenário excluído for o ativo, carregar outro existente
+    if (appState.name === key) {
+      const remaining = Object.keys(getSavedScenarios());
+      if (remaining.length > 0) {
+        window.loadScenario(encodeURIComponent(remaining[0]));
+      } else {
+        appState.name = 'Cenário Personalizado';
+      }
+    }
     renderScenariosList();
+    showToast(`Cenário "${key}" excluído com sucesso!`, 'info');
   }
 };
 
@@ -1594,15 +1672,23 @@ window.importBackupJson = function(event) {
         if (imported.scenarios && typeof imported.scenarios === 'object') {
           scenariosToMerge = imported.scenarios;
         }
+        if (typeof scenariosToMerge === 'object') {
+          Object.keys(scenariosToMerge).forEach(unmarkScenarioDeleted);
+        }
         const current = getSavedScenarios();
         const merged = { ...current, ...scenariosToMerge };
         localStorage.setItem(STORAGE_KEYS.SCENARIOS, JSON.stringify(merged));
+        localStorage.setItem('simulador_scenarios', JSON.stringify(merged));
         renderScenariosList();
 
         if (imported.realLedger && Array.isArray(imported.realLedger.transactions)) {
           window.realLedgerState = imported.realLedger;
           localStorage.setItem('amort_real_ledger_v2', JSON.stringify(imported.realLedger));
           if (window.renderRealLedger) window.renderRealLedger();
+        }
+
+        if (window.cloudSync && typeof window.cloudSync.pushToCloud === 'function' && window.cloudSync.getPin()) {
+          window.cloudSync.pushToCloud({ silent: true });
         }
 
         showToast('Cenários e histórico importados com sucesso!', 'success');
@@ -1867,6 +1953,21 @@ function renderNextActions() {
   const currRow = amortTable[currIdx] || amortTable[0];
   const nextRow = amortTable[currIdx + 1] || currRow;
 
+  // Lançamentos reais e contrato
+  const txs = window.realLedgerState?.transactions || [];
+  const contract = window.realLedgerState?.contract || {};
+  const contractStart = contract.startDate || appState.date || '2025-02-26';
+
+  // Verificar se o ciclo da parcela atual já possui amortização extra real confirmada/paga
+  const realAmortInCurr = txs.find(t => {
+    if (t.type !== 'amortization' || t.status === 'Cancelada') return false;
+    const cycle = (typeof window.getInstallmentCycleForDate === 'function')
+      ? window.getInstallmentCycleForDate(t.date, contractStart)
+      : Math.max(1, (new Date(t.date + 'T00:00:00').getFullYear() - new Date(contractStart + 'T00:00:00').getFullYear()) * 12 + (new Date(t.date + 'T00:00:00').getMonth() - new Date(contractStart + 'T00:00:00').getMonth()) + (new Date(t.date + 'T00:00:00').getDate() > new Date(contractStart + 'T00:00:00').getDate() ? 1 : 0));
+    return cycle === currRow.installment;
+  });
+  const realInstInCurr = txs.find(t => t.type === 'installment' && t.installmentNumber === currRow.installment && t.status === 'Paga');
+
   // Status Card
   const statusCard = document.getElementById('nextActionsStatusCard');
   if (statusCard) {
@@ -1875,10 +1976,12 @@ function renderNextActions() {
     const monthsEliminated = Math.max(0, originalRemaining - remainingInstallments);
     const yearsEliminated = (monthsEliminated / 12).toFixed(1);
 
+    const currentBalanceToday = window.realLedgerState?.metrics?.currentBalance || currRow.outstandingBalance;
+
     statusCard.innerHTML = `
       <div class="status-pill-item">
         <span class="status-pill-label">Saldo Devedor Hoje</span>
-        <span class="status-pill-val">${fmt.currency(currRow.outstandingBalance)}</span>
+        <span class="status-pill-val">${fmt.currency(currentBalanceToday)}</span>
       </div>
       <div class="status-pill-sep"></div>
       <div class="status-pill-item">
@@ -1929,30 +2032,64 @@ function renderNextActions() {
       ? `⚡ R$ ${plansNext.map(p => fmt.number(p.value, 0)).join(' + ')}`
       : (plansNext[0]?.frequency > 0 ? 'Recorrente mensal' : 'Aporte planejado');
 
+    let card1Html = '';
+    if (realAmortInCurr && !realInstInCurr) {
+      const bankPending = currRow.installmentAmountWithFee || currRow.installmentValue || 0;
+      card1Html = `
+        <!-- Card 1: Próximo Vencimento Imediato (Amortização já realizada) -->
+        <div class="metric-action-card highlight">
+          <div class="metric-card-top">
+            <span class="metric-card-title">Próximo Vencimento (#${currRow.installment})</span>
+            <span class="metric-horizon-badge">${fmt.dateISOToBR(currRow.date)}</span>
+          </div>
+          <div class="metric-card-amount" style="color: var(--primary-600);">
+            ${fmt.currency(bankPending)}
+          </div>
+          <div class="metric-card-details">
+            <div class="metric-detail-row">
+              <span>Parcela do Banco (#${currRow.installment}):</span>
+              <b>${fmt.currency(bankPending)}</b>
+            </div>
+            <div class="metric-detail-row" style="color: var(--success-600);">
+              <span>Amortização Extra (#${currRow.installment}):</span>
+              <b>✅ ${fmt.currency(realAmortInCurr.operationAmount)} (Paga)</b>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--success-600); font-weight: 600; margin-top: 4px; line-height: 1.35;">
+              Aporte de R$ ${fmt.number(realAmortInCurr.operationAmount, 2)} realizado em ${fmt.dateISOToBR(realAmortInCurr.date)} (R$ ${fmt.number(realAmortInCurr.totalPaid || realAmortInCurr.operationAmount, 2)} desembolso total). Próxima amortização extra: R$ ${fmt.number(nextRow.amortization || 2800, 0)} (#${nextRow.installment} em ${fmt.dateISOToBR(nextRow.date)}).
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      card1Html = `
+        <!-- Card 1: Próximo Mês Imediato -->
+        <div class="metric-action-card highlight">
+          <div class="metric-card-top">
+            <span class="metric-card-title">Próximo Vencimento (#${hNext.installmentNum})</span>
+            <span class="metric-horizon-badge">${hNext.date}</span>
+          </div>
+          <div class="metric-card-amount" style="color: var(--primary-600);">
+            ${fmt.currency(hNext.total)}
+          </div>
+          <div class="metric-card-details">
+            <div class="metric-detail-row">
+              <span>Amortização Extra:</span>
+              <b>${fmt.currency(hNext.extra)}</b>
+            </div>
+            <div class="metric-detail-row">
+              <span>Parcela do Banco:</span>
+              <span>${fmt.currency(hNext.bank)}</span>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--success-600); font-weight: 600; margin-top: 2px;">
+              ${nextTag}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     metricsGrid.innerHTML = `
-      <!-- Card 1: Próximo Mês Imediato -->
-      <div class="metric-action-card highlight">
-        <div class="metric-card-top">
-          <span class="metric-card-title">Próximo Vencimento (#${hNext.installmentNum})</span>
-          <span class="metric-horizon-badge">${hNext.date}</span>
-        </div>
-        <div class="metric-card-amount" style="color: var(--primary-600);">
-          ${fmt.currency(hNext.total)}
-        </div>
-        <div class="metric-card-details">
-          <div class="metric-detail-row">
-            <span>Amortização Extra:</span>
-            <b>${fmt.currency(hNext.extra)}</b>
-          </div>
-          <div class="metric-detail-row">
-            <span>Parcela do Banco:</span>
-            <span>${fmt.currency(hNext.bank)}</span>
-          </div>
-          <div style="font-size: 0.72rem; color: var(--success-600); font-weight: 600; margin-top: 2px;">
-            ${nextTag}
-          </div>
-        </div>
-      </div>
+      ${card1Html}
 
       <!-- Card 2: Próximos 3 Meses -->
       <div class="metric-action-card">
@@ -2076,11 +2213,19 @@ function renderNextActions() {
       const plans = getPlansForInstallment(r.installment);
       const hasSpecial = plans.some(p => p.frequency <= 0);
 
+      const realAmortInRow = txs.find(t => {
+        if (t.type !== 'amortization' || t.status === 'Cancelada') return false;
+        const cycle = (typeof window.getInstallmentCycleForDate === 'function')
+          ? window.getInstallmentCycleForDate(t.date, contractStart)
+          : 0;
+        return cycle === r.installment;
+      });
+
       let rowClass = '';
       let badgeHtml = '';
       if (isCurrent) {
         rowClass = 'row-current';
-        badgeHtml = '<span class="badge-tag current">Mês Atual</span>';
+        badgeHtml = '<span class="badge-tag current">Mês Atual</span>' + (realAmortInRow ? ' <span class="badge-tag success" style="font-size:0.68rem; background:#dcfce7; color:#166534;">✅ Amortizado</span>' : '');
       } else if (isNext) {
         rowClass = 'row-next';
         badgeHtml = '<span class="badge-tag next">Próxima</span>';
@@ -2096,7 +2241,12 @@ function renderNextActions() {
       const totalDisbursement = bankVal + extraVal;
 
       let extraDesc = '-';
-      if (extraVal > 0) {
+      if (realAmortInRow) {
+        extraDesc = `
+          <div style="font-weight: 700; color: var(--success-600);">${fmt.currency(realAmortInRow.operationAmount)}</div>
+          <div style="font-size: 0.7rem; color: #15803d; font-weight: 600;">✅ Paga em ${fmt.dateISOToBR(realAmortInRow.date)}</div>
+        `;
+      } else if (extraVal > 0) {
         if (plans.length > 1) {
           const parts = plans.map(p => `${fmt.currency(p.value)} (${p.frequency > 0 ? 'recorrente' : 'pontual'})`).join(' + ');
           extraDesc = `
@@ -2113,6 +2263,17 @@ function renderNextActions() {
         }
       }
 
+      let disbursementHtml = '';
+      const isBankPaid = txs.some(t => t.type === 'installment' && t.installmentNumber === r.installment && t.status === 'Paga');
+      if (realAmortInRow && !isBankPaid) {
+        disbursementHtml = `
+          <b style="color: var(--primary-600); font-size: 0.92rem;">${fmt.currency(bankVal)}</b>
+          <div style="font-size: 0.68rem; color: var(--text-muted);">(a pagar no banco dia ${fmt.dateISOToBR(r.date)})</div>
+        `;
+      } else {
+        disbursementHtml = `<b style="color: var(--primary-600); font-size: 0.92rem;">${fmt.currency(totalDisbursement)}</b>`;
+      }
+
       rowsHtml += `
         <tr class="${rowClass}">
           <td>
@@ -2127,7 +2288,7 @@ function renderNextActions() {
           <td>${fmt.currency(bankVal)}</td>
           <td>${extraDesc}</td>
           <td>
-            <b style="color: var(--primary-600); font-size: 0.92rem;">${fmt.currency(totalDisbursement)}</b>
+            ${disbursementHtml}
           </td>
           <td>
             <b>${fmt.currency(r.outstandingBalance)}</b>

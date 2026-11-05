@@ -169,8 +169,17 @@ const cloudSync = {
         updatedAnything = true;
       }
 
-      // 2. Atualizar Cenários Salvos
+      // 2. Atualizar Cenários Salvos e Excluídos
+      if (Array.isArray(remoteData.deletedScenarios)) {
+        try {
+          const local = JSON.parse(localStorage.getItem('simulador_deleted_scenarios') || '[]');
+          const merged = Array.from(new Set([...local, ...remoteData.deletedScenarios]));
+          localStorage.setItem('simulador_deleted_scenarios', JSON.stringify(merged));
+        } catch {}
+      }
+
       if (remoteData.scenarios && typeof remoteData.scenarios === 'object') {
+        localStorage.setItem('amort_scenarios_v3', JSON.stringify(remoteData.scenarios));
         localStorage.setItem('simulador_scenarios', JSON.stringify(remoteData.scenarios));
         if (typeof window.renderScenariosList === 'function') window.renderScenariosList();
         updatedAnything = true;
@@ -228,10 +237,17 @@ const cloudSync = {
         realLedger: window.realLedgerState || null,
         scenarios: (() => {
           try {
-            const raw = localStorage.getItem('simulador_scenarios');
+            const raw = localStorage.getItem('amort_scenarios_v3') || localStorage.getItem('simulador_scenarios');
             return raw ? JSON.parse(raw) : null;
           } catch {
             return null;
+          }
+        })(),
+        deletedScenarios: (() => {
+          try {
+            return JSON.parse(localStorage.getItem('simulador_deleted_scenarios') || '[]');
+          } catch {
+            return [];
           }
         })(),
         appState: (() => {

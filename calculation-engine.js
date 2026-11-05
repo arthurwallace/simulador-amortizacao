@@ -24,6 +24,7 @@
     root.runLocalSimulation = engine.simulate;
     root.calcProRataForDate = engine.calcProRataForDate;
     root.calcProRataFromTotalPaid = engine.calcProRataFromTotalPaid;
+    root.getInstallmentCycleForDate = engine.getInstallmentCycleForDate;
     if (!root.fmt) {
       root.fmt = engine.Formatters;
     }
@@ -301,6 +302,29 @@
   }
 
   // ---------------------------------------------------------------------------
+  // 3.1. DETERMINAÇÃO DO CICLO DE PARCELA CORRESPONDENTE
+  // ---------------------------------------------------------------------------
+  /**
+   * Determina o ciclo de parcela correspondente a uma determinada data de pagamento/amortização
+   * com base na data de início do contrato e dia de vencimento.
+   *
+   * @param {string} dateStr Data do evento (AAAA-MM-DD)
+   * @param {string} startDateStr Data de início do contrato (AAAA-MM-DD)
+   * @returns {number} Número da parcela/ciclo (1, 2, 3...)
+   */
+  function getInstallmentCycleForDate(dateStr, startDateStr) {
+    if (!dateStr || !startDateStr) return 1;
+    const d = new Date(dateStr + 'T00:00:00');
+    const start = new Date(startDateStr + 'T00:00:00');
+    let diff = (d.getFullYear() - start.getFullYear()) * 12 + (d.getMonth() - start.getMonth());
+    const dueDay = start.getDate();
+    if (d.getDate() > dueDay) {
+      diff += 1;
+    }
+    return Math.max(1, diff);
+  }
+
+  // ---------------------------------------------------------------------------
   // 4. MOTOR COMPLETO DE SIMULAÇÃO (SAC & PRICE)
   // ---------------------------------------------------------------------------
   /**
@@ -570,6 +594,7 @@
     Formatters,
     calcProRataForDate,
     calcProRataFromTotalPaid,
+    getInstallmentCycleForDate,
     simulate,
     calculateSavings
   };

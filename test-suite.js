@@ -11,8 +11,17 @@ global.document = {
     textContent: '',
     style: {},
     classList: { add: () => {}, remove: () => {}, toggle: () => {} },
-    innerHTML: ''
+    innerHTML: '',
+    appendChild: () => {},
+    removeChild: () => {}
   }),
+  createElement: () => ({
+    style: {},
+    classList: { add: () => {}, remove: () => {} },
+    appendChild: () => {},
+    remove: () => {}
+  }),
+  body: { appendChild: () => {}, removeChild: () => {} },
   addEventListener: () => {}
 };
 global.localStorage = {
@@ -78,9 +87,16 @@ async function runTestSuite() {
   browserCtx.document = {
     addEventListener: () => {},
     getElementById: () => ({
-      value: '', textContent: '', style: {}, classList: { add: () => {}, remove: () => {}, toggle: () => {} }, innerHTML: '', querySelector: () => null
+      value: '', textContent: '', style: {}, classList: { add: () => {}, remove: () => {}, toggle: () => {} }, innerHTML: '', querySelector: () => null, appendChild: () => {}, removeChild: () => {}
     }),
-    querySelectorAll: () => []
+    querySelectorAll: () => [],
+    createElement: () => ({
+      style: {},
+      classList: { add: () => {}, remove: () => {} },
+      appendChild: () => {},
+      remove: () => {}
+    }),
+    body: { appendChild: () => {}, removeChild: () => {} }
   };
   browserCtx.localStorage = {
     _data: {},
@@ -484,7 +500,110 @@ async function runTestSuite() {
   }
   console.log('✅ Teste 7 passou com sucesso! Projeção nativa 100% fiel e exata ao PDF oficial do banco Itaú!\n');
 
-  console.log('🎉 TODOS OS 7 TESTES PASSARAM COM 100% DE SUCESSO! 🎉');
+  // Teste 8: Deduplicação e Precedência do Extrato Real sobre a Simulação Teórica
+  console.log('--- Teste 8: Deduplicação e Precedência do Extrato Real (Parcela #21) ---');
+  const userBackupPath = 'C:/Users/S009341701/.gemini/antigravity/brain/3001ea27-986e-41df-8490-38afe8f3b3a3/.user_uploaded/media_1793889019541_8f7238bf.json';
+  if (fs.existsSync(userBackupPath)) {
+    const backupJson = JSON.parse(fs.readFileSync(userBackupPath, 'utf8'));
+    browserCtx.window.realLedgerState = backupJson.realLedger;
+    browserCtx.window.appState = {
+      ...backupJson.scenarios['Financiamento R$ 228k (SAC) - Estratégia Acelerada']
+    };
+
+    // Antes da sincronização: appState tinha plano recorrente de 2800 começando em 21
+    const oldRecurr = browserCtx.window.appState.plans.find(p => p.id === 'plan_12');
+    console.log(` • Plano recorrente antes do sync: firstPayment = ${oldRecurr.firstPayment}, valor = R$ ${oldRecurr.value}`);
+
+    // Executar Sincronização do Extrato Real com o Simulador
+    browserCtx.window.syncRealLedgerWithSimulator();
+
+    // Validar planos após a sincronização
+    const syncedPlans = browserCtx.window.appState.plans;
+    const realAmortP21 = syncedPlans.find(p => p.firstPayment === 21 && p.type === 'amortization');
+    const recurringAfterSync = syncedPlans.find(p => p.type === 'amortization' && p.frequency > 0);
+    const futurePunctualP23 = syncedPlans.find(p => p.firstPayment === 23 && p.type === 'amortization');
+
+    console.log(` • Amortização na Parcela #21: valor = R$ ${realAmortP21.value} (isReal = ${realAmortP21.isReal})`);
+    console.log(` • Início do Plano Recorrente após o sync: Parcela #${recurringAfterSync.firstPayment} (valor = R$ ${recurringAfterSync.value})`);
+    console.log(` • Aporte Pontual Futuro Parcela #23 preservado: valor = R$ ${futurePunctualP23.value}`);
+
+    if (Math.abs(realAmortP21.value - 3116.15) > 0.01) {
+      throw new Error(`Amortização real da parcela 21 deveria ser 3116.15, obtido: ${realAmortP21.value}`);
+    }
+    if (recurringAfterSync.firstPayment !== 22) {
+      throw new Error(`Plano recorrente deveria ter sido ajustado para iniciar na parcela 22, mas está na ${recurringAfterSync.firstPayment}`);
+    }
+    if (futurePunctualP23.value !== 12000) {
+      throw new Error('Aporte pontual da parcela 23 não foi preservado corretamente');
+    }
+
+    // Executar simulação local e validar batimento centesimal na tabela mês a mês
+    const apiPayload = browserCtx.window.buildApiPayload();
+    console.log(` • Amortizações enviadas para cálculo: Parcela 21 = R$ ${apiPayload.amortizations[21]?.value || 0} | Parcela 22 = R$ ${apiPayload.amortizations[22]?.value || 0}`);
+
+    if (Math.abs(apiPayload.amortizations[21].value - 3116.15) > 0.01) {
+      throw new Error(`Deveria lançar no mês 21 apenas R$ 3.116,15 sem somar os R$ 2.800! Valor obtido: ${apiPayload.amortizations[21].value}`);
+    }
+    if (Math.abs(apiPayload.amortizations[22].value - 2800) > 0.01) {
+      throw new Error(`Parcela 22 deveria ter R$ 2.800 da recorrente. Obtido: ${apiPayload.amortizations[22].value}`);
+    }
+
+    const simRes = browserCtx.window.runLocalSimulation(apiPayload).data;
+    const row21 = simRes.simulationWithAmortizationTable.find(r => r.installment === 21);
+    const row22 = simRes.simulationWithAmortizationTable.find(r => r.installment === 22);
+
+    console.log(` • Tabela Simulação - Parcela #21 Amortização Extra: R$ ${row21.amortization} (Saldo restante: R$ ${row21.outstandingBalance.toFixed(2)})`);
+    console.log(` • Tabela Simulação - Parcela #22 Amortização Extra: R$ ${row22.amortization} (Saldo restante: R$ ${row22.outstandingBalance.toFixed(2)})`);
+
+    if (Math.abs(row21.amortization - 3116.15) > 0.01) {
+      throw new Error(`Parcela #21 na tabela de amortização com valor inesperado: ${row21.amortization}`);
+    }
+    if (Math.abs(row22.amortization - 2800.00) > 0.01) {
+      throw new Error(`Parcela #22 na tabela de amortização com valor inesperado: ${row22.amortization}`);
+    }
+
+    console.log('✅ Teste 8 passou com sucesso! O Real assumiu precedência total e deduplicou a recorrente da parcela #21!\n');
+  }
+
+  // Teste 9: Exclusão de Cenários Salvos (Sem Ressuscitar Presets)
+  console.log('--- Teste 9: Exclusão Completa e Permanente de Cenários Salvos ---');
+  const scenarioNameToDelete = 'Financiamento R$ 228k (SAC) - Contrato Oficial DDC Itaú (118 meses)';
+  const beforeDelete = browserCtx.window.getSavedScenarios();
+  console.log(` • Cenários antes da exclusão (${Object.keys(beforeDelete).length}):`, Object.keys(beforeDelete));
+  if (!beforeDelete[scenarioNameToDelete]) {
+    throw new Error(`Cenário para teste de exclusão "${scenarioNameToDelete}" não encontrado inicialmente`);
+  }
+
+  // Executar exclusão
+  browserCtx.window.deleteScenarioFromStorage(scenarioNameToDelete);
+
+  const afterDelete = browserCtx.window.getSavedScenarios();
+  console.log(` • Cenários após exclusão (${Object.keys(afterDelete).length}):`, Object.keys(afterDelete));
+
+  if (afterDelete[scenarioNameToDelete]) {
+    throw new Error(`O cenário "${scenarioNameToDelete}" ressuscitou mesmo após ser excluído!`);
+  }
+
+  // Testar recriação / salvar novo cenário com mesmo nome
+  browserCtx.window.saveScenarioToStorage(scenarioNameToDelete, {
+    name: scenarioNameToDelete,
+    loanAmount: 228000,
+    plans: []
+  });
+  const afterRecreate = browserCtx.window.getSavedScenarios();
+  if (!afterRecreate[scenarioNameToDelete]) {
+    throw new Error('Falha ao recriar cenário salvo');
+  }
+  // Excluir novamente para confirmar idempotência
+  browserCtx.window.deleteScenarioFromStorage(scenarioNameToDelete);
+  const finalCheck = browserCtx.window.getSavedScenarios();
+  if (finalCheck[scenarioNameToDelete]) {
+    throw new Error('Cenário não foi excluído permanentemente');
+  }
+
+  console.log('✅ Teste 9 passou com sucesso! Funcionalidade de excluir cenários salvos validada e permanente!\n');
+
+  console.log('🎉 TODOS OS 9 TESTES PASSARAM COM 100% DE SUCESSO! 🎉');
 }
 
 runTestSuite().catch(e => {

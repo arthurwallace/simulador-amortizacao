@@ -1674,46 +1674,23 @@ window.syncRealLedgerWithSimulator = function() {
   }
 
   // Agrupar amortizações extras por ciclo mensal de parcela
-  // Cria planos do simulador para cada amortização ou grupo
+  // Cria planos do simulador para cada amortização real
   const newPlans = [];
-
-  // Planos de encargos fixos
-  newPlans.push({
-    id: 'plan_corr_hist',
-    type: 'correction',
-    name: 'Correção TR Histórica (Parcelas 1 a 20)',
-    value: 0.17,
-    firstPayment: 1,
-    lastPayment: 20,
-    frequency: 1
-  });
-  newPlans.push({
-    id: 'plan_fee_hist',
-    type: 'fee',
-    name: 'Seguro Mensal Histórico (MIP + DFI)',
-    value: 40.00,
-    firstPayment: 1,
-    lastPayment: 20,
-    frequency: 1
-  });
-  newPlans.push({
-    id: 'plan_fee_proj',
-    type: 'fee',
-    name: 'Seguro Mensal Projetado (MIP + DFI)',
-    value: 31.00,
-    firstPayment: 21,
-    lastPayment: 420,
-    frequency: 1
-  });
-
-  // Mapear amortizações extras reais
   const amorts = txs.filter(t => t.type === 'amortization' && t.status !== 'Cancelada');
+  const contractStart = contract.startDate || window.appState.date || '2025-02-26';
+
+  // 1. Determinar última parcela regular paga no extrato
+  const paidInsts = txs.filter(t => t.type === 'installment' && t.status === 'Paga');
+  const lastPaidRegularInst = paidInsts.reduce((max, t) => Math.max(max, t.installmentNumber || 0), 20);
+
+  // 2. Mapear amortizações extras reais e calcular o maior ciclo atingido
+  let maxRealAmortInstNum = 0;
   amorts.forEach((am, idx) => {
-    // Determinar a parcela de referência com base na data
-    const dAmort = new Date(am.date + 'T00:00:00');
-    const start = new Date(contract.startDate + 'T00:00:00');
-    const diffMonths = (dAmort.getFullYear() - start.getFullYear()) * 12 + (dAmort.getMonth() - start.getMonth());
-    const instNum = Math.max(1, diffMonths);
+    const instNum = (typeof window.getInstallmentCycleForDate === 'function')
+      ? window.getInstallmentCycleForDate(am.date, contractStart)
+      : Math.max(1, (new Date(am.date + 'T00:00:00').getFullYear() - new Date(contractStart + 'T00:00:00').getFullYear()) * 12 + (new Date(am.date + 'T00:00:00').getMonth() - new Date(contractStart + 'T00:00:00').getMonth()) + (new Date(am.date + 'T00:00:00').getDate() > new Date(contractStart + 'T00:00:00').getDate() ? 1 : 0));
+    
+    maxRealAmortInstNum = Math.max(maxRealAmortInstNum, instNum);
 
     newPlans.push({
       id: `plan_real_amort_${idx + 1}`,
@@ -1723,26 +1700,83 @@ window.syncRealLedgerWithSimulator = function() {
       value: am.operationAmount,
       firstPayment: instNum,
       lastPayment: instNum,
-      frequency: -1
+      frequency: -1,
+      isReal: true,
+      realDate: am.date,
+      realPaid: am.totalPaid || am.operationAmount
     });
   });
 
-  // Manter planos futuros planejados (após parcela 20)
-  const existingFuturePlans = (window.appState.plans || []).filter(p => p.firstPayment > 20 && p.type === 'amortization');
-  if (existingFuturePlans.length > 0) {
-    newPlans.push(...existingFuturePlans);
+  // 3. Planos de encargos fixos (histórico até a última parcela paga, projetado a partir da próxima)
+  newPlans.unshift(
+    {
+      id: 'plan_corr_hist',
+      type: 'correction',
+      name: `Correção TR Histórica (Parcelas 1 a ${lastPaidRegularInst})`,
+      value: 0.17,
+      firstPayment: 1,
+      lastPayment: lastPaidRegularInst,
+      frequency: 1
+    },
+    {
+      id: 'plan_fee_hist',
+      type: 'fee',
+      name: 'Seguro Mensal Histórico (MIP + DFI)',
+      value: 40.00,
+      firstPayment: 1,
+      lastPayment: lastPaidRegularInst,
+      frequency: 1
+    },
+    {
+      id: 'plan_fee_proj',
+      type: 'fee',
+      name: 'Seguro Mensal Projetado (MIP + DFI)',
+      value: 31.00,
+      firstPayment: lastPaidRegularInst + 1,
+      lastPayment: 420,
+      frequency: 1
+    }
+  );
+
+  // 4. Manter planos futuros planejados (Estratégia Recorrente e Aportes Pontuais)
+  // Regra fundamental: O Real é a fonte da verdade. Qualquer plano recorrente existente
+  // deve começar APÓS o último ciclo com amortização real confirmada (maxRealAmortInstNum + 1),
+  // para que o valor real pago não seja somado indevidamente com a projeção teórica no mesmo mês.
+  const futureRecurringStart = maxRealAmortInstNum + 1;
+
+  const currentPlans = window.appState.plans || [];
+  const existingRecurring = currentPlans.filter(p => p.type === 'amortization' && Number(p.frequency) > 0);
+  const existingFuturePunctual = currentPlans.filter(p => 
+    p.type === 'amortization' && 
+    (!p.frequency || Number(p.frequency) <= 0) && 
+    !p.id.startsWith('plan_real_amort') && 
+    Number(p.firstPayment) > maxRealAmortInstNum
+  );
+
+  if (existingRecurring.length > 0) {
+    existingRecurring.forEach(rp => {
+      newPlans.push({
+        ...rp,
+        firstPayment: Math.max(Number(rp.firstPayment), futureRecurringStart)
+      });
+    });
   } else {
-    // Adicionar estratégia futura padrão
+    // Adicionar estratégia futura padrão iniciando no primeiro ciclo livre
     newPlans.push({
       id: 'plan_future_recurr',
       type: 'amortization',
       subType: 'term',
       name: 'Amortização Recorrente Planejada (R$ 2.800/mês)',
       value: 2800.00,
-      firstPayment: 21,
+      firstPayment: futureRecurringStart,
       lastPayment: 420,
       frequency: 1
     });
+  }
+
+  // Preservar aportes pontuais futuros planejados (> maxRealAmortInstNum)
+  if (existingFuturePunctual.length > 0) {
+    newPlans.push(...existingFuturePunctual);
   }
 
   window.appState.plans = newPlans;
