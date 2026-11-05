@@ -5,3 +5,7 @@ main = "_worker.js"
 [assets]
 directory = "."
 binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "AMORT_KV"
+id = "2c13c38fd7c34e49985f9759bb87d2b5"
