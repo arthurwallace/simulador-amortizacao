@@ -1,0 +1,8 @@
+_worker.js
+functions/
+wrangler.toml
+.assetsignore
+.git/
+.gitignore
+test-suite.js
+create-sample-pdf.py
