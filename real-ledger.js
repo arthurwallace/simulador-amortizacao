@@ -1303,7 +1303,7 @@ window.renderRealLedger = function() {
       <!-- Card 1: Saldo Devedor Real Atual -->
       <div class="real-kpi-card highlight">
         <div class="real-kpi-top">
-          <span class="real-kpi-title">Saldo Devedor Atual</span>
+          <span class="real-kpi-title">Saldo Devedor Atual (Real)</span>
           <span class="real-kpi-badge badge-primary">Oficial Itaú</span>
         </div>
         <div class="real-kpi-val" style="color: var(--primary-600);">
