@@ -87,6 +87,7 @@
   --danger-600: #fca5a5;
 
   /* Theme contrast fallbacks */
+  --primary-600: #75a0ff;
   --primary-700: #60a5fa;
   --success-700: #34d399;
   --warning-700: #fbbf24;
