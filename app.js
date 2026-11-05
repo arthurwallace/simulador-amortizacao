@@ -234,6 +234,15 @@ let appState = {
   tableSearchTerm: ''
 };
 
+// Expor appState no escopo global window de forma reativa
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'appState', {
+    get() { return appState; },
+    set(newVal) { appState = newVal; },
+    configurable: true
+  });
+}
+
 // Utilities & Formatters
 const fmt = {
   currency: (val) => {
@@ -2176,6 +2185,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 if (typeof window !== 'undefined') {
   window.fmt = fmt;
+  window.saveCurrentStateToStorage = saveCurrentStateToStorage;
+  window.syncFormInputsFromState = syncFormInputsFromState;
   window.runLocalSimulation = runLocalSimulation;
   window.buildApiPayload = buildApiPayload;
   window.fetchSimulationData = fetchSimulationData;

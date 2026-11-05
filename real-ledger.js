@@ -1655,8 +1655,16 @@ window.exportRealLedgerCSV = function() {
  * Sincroniza os lançamentos reais com os planos do simulador
  */
 window.syncRealLedgerWithSimulator = function() {
-  const txs = window.realLedgerState.transactions;
-  const contract = window.realLedgerState.contract;
+  const txs = window.realLedgerState?.transactions || [];
+  const contract = window.realLedgerState?.contract || {};
+
+  if (!window.appState) {
+    if (typeof appState !== 'undefined') {
+      window.appState = appState;
+    } else {
+      window.appState = {};
+    }
+  }
 
   // Atualizar parâmetros do financiamento
   if (contract.loanAmount) window.appState.loanAmount = contract.loanAmount;
@@ -1742,6 +1750,9 @@ window.syncRealLedgerWithSimulator = function() {
   if (window.syncFormInputsFromState) window.syncFormInputsFromState();
   if (window.renderPlansList) window.renderPlansList();
   if (window.fetchSimulationData) window.fetchSimulationData();
+  if (window.cloudSync && window.cloudSync.isAutoSyncEnabled() && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 
   window.showToast('Cenário do simulador sincronizado com o extrato real!', 'success');
 };
