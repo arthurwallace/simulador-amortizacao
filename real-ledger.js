@@ -932,7 +932,85 @@ function calcProRataForDate(amortDateStr, amount, customMonthlyRate, customTrRat
 }
 
 /**
- * Atualização interativa do modal de amortização quando muda data ou valor
+ * Cálculo inverso de Juros Pró-rata e TR a partir do Valor Efetivamente Pago (Desembolso Total)
+ * Delegado ao módulo puro calculation-engine.js
+ */
+function calcProRataFromTotalPaid(amortDateStr, totalPaid, customMonthlyRate, customTrRate) {
+  const engine = (typeof CalculationEngine !== 'undefined' && CalculationEngine.calcProRataFromTotalPaid)
+    ? CalculationEngine
+    : (typeof require === 'function' ? require('./calculation-engine.js') : null);
+
+  if (engine && engine.calcProRataFromTotalPaid) {
+    const contract = window.realLedgerState?.contract || {};
+    const monthlyRate = (customMonthlyRate !== undefined && customMonthlyRate !== null)
+      ? customMonthlyRate
+      : (contract.interestRateMonthly || 0.9631393);
+    return engine.calcProRataFromTotalPaid(amortDateStr, totalPaid, monthlyRate, customTrRate, 26);
+  }
+
+  const numTotal = Number(totalPaid) || 0;
+  if (!amortDateStr || numTotal <= 0) {
+    return { days: 0, proRataInterest: 0, monetaryCorrection: 0, totalPaid: 0, principalAmount: 0, baseDateStr: '-' };
+  }
+
+  const dAmort = new Date(amortDateStr + 'T00:00:00');
+  const contract = window.realLedgerState?.contract || {};
+  const monthlyRate = (customMonthlyRate !== undefined && customMonthlyRate !== null)
+    ? customMonthlyRate
+    : (contract.interestRateMonthly || 0.9631393);
+
+  const year = dAmort.getFullYear();
+  const month = dAmort.getMonth();
+  const day = dAmort.getDate();
+
+  let baseDate = new Date(year, month, 26);
+  if (day < 26) {
+    baseDate = new Date(year, month - 1, 26);
+  }
+
+  const diffMs = dAmort.getTime() - baseDate.getTime();
+  const days = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  const baseDateStr = baseDate.toISOString().substring(0, 10);
+
+  if (days === 0) {
+    return {
+      days: 0,
+      proRataInterest: 0,
+      monetaryCorrection: 0,
+      totalPaid: numTotal,
+      principalAmount: numTotal,
+      baseDateStr: baseDateStr
+    };
+  }
+
+  const iMonthly = monthlyRate / 100;
+  const factorInterest = Math.pow(1 + iMonthly, days / 30) - 1;
+
+  const trRate = (customTrRate !== undefined && customTrRate !== null) ? customTrRate : 0.1719;
+  const trMonthly = trRate / 100;
+  const factorTR = Math.pow(1 + trMonthly, days / 30) - 1;
+
+  const totalFactor = 1 + factorInterest + factorTR;
+  const estPrincipal = numTotal / totalFactor;
+
+  const proRataInterest = Math.round(estPrincipal * factorInterest * 100) / 100;
+  const monetaryCorrection = Math.round(estPrincipal * factorTR * 100) / 100;
+  const principalAmount = Math.max(0, Math.round((numTotal - proRataInterest - monetaryCorrection) * 100) / 100);
+
+  return {
+    days,
+    proRataInterest,
+    monetaryCorrection,
+    totalPaid: numTotal,
+    principalAmount,
+    baseDateStr: baseDateStr
+  };
+}
+
+/**
+ * Atualização interativa do modal de amortização quando muda data ou valor.
+ * O valor informado é o DESEMBOLSO EFETIVAMENTE PAGO pelo usuário (débito em conta).
+ * O sistema desconta os juros pró-rata e a TR para apurar o abatimento de capital no saldo.
  */
 window.onRealAmortDateOrAmountChange = function() {
   const dateInput = document.getElementById('modalRealAmortDate');
@@ -940,9 +1018,9 @@ window.onRealAmortDateOrAmountChange = function() {
   if (!dateInput || !amountInput) return;
 
   const dateVal = dateInput.value;
-  const amountVal = (window.fmt && window.fmt.parseCurrency) ? window.fmt.parseCurrency(amountInput.value) : parseFloat(amountInput.value || 0);
+  const totalPaidVal = (window.fmt && window.fmt.parseCurrency) ? window.fmt.parseCurrency(amountInput.value) : parseFloat(amountInput.value || 0);
 
-  const calc = calcProRataForDate(dateVal, amountVal);
+  const calc = calcProRataFromTotalPaid(dateVal, totalPaidVal);
 
   const badge = document.getElementById('realAmortCycleBadge');
   const desc = document.getElementById('realAmortCycleDesc');
@@ -965,9 +1043,9 @@ window.onRealAmortDateOrAmountChange = function() {
 
   if (desc) {
     if (calc.days === 0) {
-      desc.textContent = 'Amortização realizada exatamente no dia de vencimento contratual: isenta de encargos pró-rata.';
+      desc.textContent = 'Amortização realizada no dia do vencimento contratual (dia 26): isenta de encargos pró-rata. 100% do valor pago abaterá o saldo devedor.';
     } else {
-      desc.textContent = `Desde o vencimento anterior (${window.fmt.dateISOToBR(calc.baseDateStr)}), decorreram ${calc.days} dias. O banco cobra juros pró-rata de ${window.fmt.currency(calc.proRataInterest)} sobre o saldo amortizado.`;
+      desc.textContent = `Desde o vencimento anterior (${window.fmt.dateISOToBR(calc.baseDateStr)}), decorreram ${calc.days} dias. Do valor pago, o banco cobra juros pró-rata de ${window.fmt.currency(calc.proRataInterest)} e TR de ${window.fmt.currency(calc.monetaryCorrection)}, abatendo ${window.fmt.currency(calc.principalAmount)} do saldo devedor.`;
     }
   }
 
@@ -982,20 +1060,37 @@ window.updateRealAmortTotalPaid = function() {
   const inpJuros = document.getElementById('modalRealAmortProRata');
   const inpTR = document.getElementById('modalRealAmortTR');
 
-  const amount = (window.fmt && window.fmt.parseCurrency) ? window.fmt.parseCurrency(amountInput?.value || 0) : 0;
+  const totalPaid = (window.fmt && window.fmt.parseCurrency) ? window.fmt.parseCurrency(amountInput?.value || 0) : 0;
   const juros = parseFloat(inpJuros?.value || 0) || 0;
   const tr = parseFloat(inpTR?.value || 0) || 0;
 
   const totalFees = Math.round((juros + tr) * 100) / 100;
-  const totalPaid = Math.round((amount + totalFees) * 100) / 100;
+  const principal = Math.max(0, Math.round((totalPaid - totalFees) * 100) / 100);
 
   const elPrin = document.getElementById('realAmortSumPrincipal');
   const elFees = document.getElementById('realAmortSumFees');
   const elTotal = document.getElementById('realAmortSumTotal');
 
-  if (elPrin) elPrin.textContent = window.fmt.currency(amount);
-  if (elFees) elFees.textContent = window.fmt.currency(totalFees);
   if (elTotal) elTotal.textContent = window.fmt.currency(totalPaid);
+  if (elFees) elFees.textContent = window.fmt.currency(totalFees);
+  if (elPrin) {
+    elPrin.textContent = window.fmt.currency(principal);
+    if (totalPaid > 0 && principal === 0) {
+      elPrin.style.color = 'var(--danger-600)';
+    } else {
+      elPrin.style.color = 'var(--success-600)';
+    }
+  }
+
+  // Atualizar a descrição caso o usuário edite os encargos manualmente
+  const dateInput = document.getElementById('modalRealAmortDate');
+  const desc = document.getElementById('realAmortCycleDesc');
+  if (dateInput && dateInput.value && desc) {
+    const calc = calcProRataFromTotalPaid(dateInput.value, totalPaid);
+    if (calc.days > 0) {
+      desc.textContent = `Desde o vencimento anterior (${window.fmt.dateISOToBR(calc.baseDateStr)}), decorreram ${calc.days} dias. Do valor pago, o banco cobra juros pró-rata de ${window.fmt.currency(juros)} e TR de ${window.fmt.currency(tr)}, abatendo ${window.fmt.currency(principal)} do saldo devedor.`;
+    }
+  }
 };
 
 window.selectRealAmortType = function(type) {
@@ -1031,7 +1126,10 @@ window.openRealAmortizationModal = function(editId = null) {
     if (title) title.textContent = 'Editar Amortização Extra Real';
     if (hiddenId) hiddenId.value = tx.id;
     if (dateInput) dateInput.value = tx.date;
-    if (amountInput) amountInput.value = window.fmt.currency(tx.operationAmount);
+    
+    // O valor a exibir no input é o desembolso efetivamente pago
+    const totalDisbursed = tx.totalPaid || Math.round(((tx.operationAmount || 0) + (tx.proRataInterest || 0) + (tx.monetaryCorrection || 0)) * 100) / 100;
+    if (amountInput) amountInput.value = window.fmt.currency(totalDisbursed);
     if (notesInput) notesInput.value = tx.description || '';
     window.selectRealAmortType(tx.subType || 'term');
     
@@ -1040,13 +1138,26 @@ window.openRealAmortizationModal = function(editId = null) {
     const inpTR = document.getElementById('modalRealAmortTR');
     if (inpJuros) inpJuros.value = (tx.proRataInterest || 0).toFixed(2);
     if (inpTR) inpTR.value = (tx.monetaryCorrection || 0).toFixed(2);
+
+    const calc = calcProRataFromTotalPaid(tx.date, totalDisbursed);
+    const badge = document.getElementById('realAmortCycleBadge');
+    if (badge) {
+      if (calc.days === 0) {
+        badge.textContent = 'Dia de Vencimento (0 dias de juros)';
+        badge.className = 'pro-rata-cycle-badge badge-success';
+      } else {
+        badge.textContent = `${calc.days} dia(s) no ciclo (${window.fmt.dateISOToBR(calc.baseDateStr)})`;
+        badge.className = 'pro-rata-cycle-badge badge-warning';
+      }
+    }
+
     window.updateRealAmortTotalPaid();
   } else {
     if (title) title.textContent = 'Lançar Amortização Extra Real';
     if (hiddenId) hiddenId.value = '';
     const today = new Date().toISOString().substring(0, 10);
     if (dateInput) dateInput.value = today;
-    if (amountInput) amountInput.value = 'R$ 2.800,00';
+    if (amountInput) amountInput.value = 'R$ 3.127,90';
     if (notesInput) notesInput.value = 'Amortização redução de prazo recurso próprio';
     window.selectRealAmortType('term');
     window.onRealAmortDateOrAmountChange();
@@ -1060,7 +1171,7 @@ window.saveRealAmortizationModal = function() {
   const hiddenId = document.getElementById('modalRealAmortId')?.value;
   const dateVal = document.getElementById('modalRealAmortDate')?.value;
   const amountRaw = document.getElementById('modalRealAmortAmount')?.value;
-  const amount = window.fmt.parseCurrency(amountRaw);
+  const totalPaid = window.fmt.parseCurrency(amountRaw);
   const subType = document.querySelector('input[name="modalRealAmortType"]:checked')?.value || 'term';
   const proRata = parseFloat(document.getElementById('modalRealAmortProRata')?.value || 0) || 0;
   const tr = parseFloat(document.getElementById('modalRealAmortTR')?.value || 0) || 0;
@@ -1070,8 +1181,16 @@ window.saveRealAmortizationModal = function() {
     window.showToast('Informe a data da amortização.', 'error');
     return;
   }
-  if (!amount || amount <= 0) {
-    window.showToast('Informe um valor de amortização válido.', 'error');
+  if (!totalPaid || totalPaid <= 0) {
+    window.showToast('Informe um valor de pagamento válido.', 'error');
+    return;
+  }
+
+  const totalFees = Math.round((proRata + tr) * 100) / 100;
+  const principal = Math.max(0, Math.round((totalPaid - totalFees) * 100) / 100);
+
+  if (principal <= 0 && totalFees > 0) {
+    window.showToast('O valor pago deve ser maior que os encargos pró-rata.', 'error');
     return;
   }
 
@@ -1080,11 +1199,13 @@ window.saveRealAmortizationModal = function() {
     const tx = window.realLedgerState.transactions.find(t => t.id === hiddenId);
     if (tx) {
       tx.date = dateVal;
-      tx.operationAmount = amount;
+      tx.operationAmount = principal;
+      tx.totalPaid = totalPaid;
       tx.subType = subType;
       tx.proRataInterest = proRata;
       tx.monetaryCorrection = tr;
       tx.description = notes;
+      delete tx.balanceAfter; // Força recálculo encadeado do saldo devedor
     }
   } else {
     // Novo lançamento
@@ -1094,7 +1215,8 @@ window.saveRealAmortizationModal = function() {
       subType: subType,
       date: dateVal,
       description: notes,
-      operationAmount: amount,
+      operationAmount: principal,
+      totalPaid: totalPaid,
       proRataInterest: proRata,
       monetaryCorrection: tr,
       status: 'Paga'
@@ -1105,7 +1227,10 @@ window.saveRealAmortizationModal = function() {
   recalculateRealLedger();
   renderRealLedger();
   window.closeModal('modalRealAmortization');
-  window.showToast('Amortização extra registrada e saldo recalculado!', 'success');
+  window.showToast(hiddenId ? 'Amortização real atualizada com sucesso!' : 'Amortização extra registrada e saldo recalculado!', 'success');
+  if (window.cloudSync && window.cloudSync.isAutoSyncEnabled() && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 };
 
 /**
@@ -1247,6 +1372,9 @@ window.saveRealInstallmentModal = function() {
   renderRealLedger();
   window.closeModal('modalRealInstallment');
   window.showToast(`Parcela #${num} salva com sucesso!`, 'success');
+  if (window.cloudSync && window.cloudSync.isAutoSyncEnabled() && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 };
 
 /**
@@ -1267,6 +1395,9 @@ window.deleteRealEntry = function(id) {
   recalculateRealLedger();
   renderRealLedger();
   window.showToast('Lançamento removido e saldos recalculados!', 'info');
+  if (window.cloudSync && window.cloudSync.isAutoSyncEnabled() && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 };
 
 /**
@@ -2141,11 +2272,15 @@ window.applyDivergenceDecisions = function() {
 
   window.closeModal('modalDivergences');
   window.showToast(`${appliedCount} atualização(ões) do extrato bancário aplicada(s) com sucesso!`, 'success');
+  if (window.cloudSync && window.cloudSync.isAutoSyncEnabled() && window.cloudSync.getPin()) {
+    window.cloudSync.pushToCloud({ silent: true });
+  }
 };
 
 // Expor funções no objeto global window
 window.recalculateRealLedger = recalculateRealLedger;
 window.calcProRataForDate = calcProRataForDate;
+window.calcProRataFromTotalPaid = calcProRataFromTotalPaid;
 window.parseDdcText = parseDdcText;
 window.detectDivergences = detectDivergences;
 window.openDivergencesModal = openDivergencesModal;

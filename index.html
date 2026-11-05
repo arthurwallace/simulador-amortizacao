@@ -44,6 +44,12 @@
           <span class="btn-text">Meus Cenários</span>
         </button>
 
+        <button class="btn btn-secondary btn-sm" onclick="openCloudSyncModal()" id="btnCloudSync" title="Sincronização em Nuvem Cloudflare (Multi-dispositivo)">
+          <span id="cloudSyncDot" class="sync-status-dot unconfigured"></span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+          <span class="btn-text" id="cloudSyncStatusText">Nuvem</span>
+        </button>
+
         <button class="btn btn-secondary btn-sm header-print-btn" onclick="printReport()" id="btnPrintTop" title="Imprimir relatório completo">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
           <span class="btn-text">Imprimir / PDF</span>
@@ -788,9 +794,9 @@
 
           <div class="input-field">
             <label class="input-label" for="modalRealAmortAmount">
-              Valor da Operação (Abatimento Principal) <span class="req">*</span>
+              Valor Efetivamente Pago (Desembolso) <span class="req">*</span>
             </label>
-            <input type="text" id="modalRealAmortAmount" class="input-control" placeholder="R$ 2.800,00" required oninput="onRealAmortDateOrAmountChange()">
+            <input type="text" id="modalRealAmortAmount" class="input-control" placeholder="R$ 3.127,90" required oninput="onRealAmortDateOrAmountChange()">
           </div>
         </div>
 
@@ -834,18 +840,18 @@
 
           <div class="pro-rata-summary-row">
             <div class="pro-rata-sum-item">
-              <span class="pro-rata-sum-label">Abatimento no Saldo:</span>
-              <span class="pro-rata-sum-val" id="realAmortSumPrincipal">R$ 0,00</span>
+              <span class="pro-rata-sum-label">Valor Pago (Desembolso):</span>
+              <span class="pro-rata-sum-val" id="realAmortSumTotal">R$ 0,00</span>
             </div>
-            <div class="pro-rata-sum-sep">+</div>
+            <div class="pro-rata-sum-sep">-</div>
             <div class="pro-rata-sum-item">
               <span class="pro-rata-sum-label">Encargos Pró-rata:</span>
               <span class="pro-rata-sum-val" style="color: var(--warning-600);" id="realAmortSumFees">R$ 0,00</span>
             </div>
             <div class="pro-rata-sum-sep">=</div>
             <div class="pro-rata-sum-item highlight">
-              <span class="pro-rata-sum-label">Desembolso Total:</span>
-              <span class="pro-rata-sum-val" style="color: var(--primary-600); font-weight: 800;" id="realAmortSumTotal">R$ 0,00</span>
+              <span class="pro-rata-sum-label">Abatimento no Saldo:</span>
+              <span class="pro-rata-sum-val" style="color: var(--success-600); font-weight: 800;" id="realAmortSumPrincipal">R$ 0,00</span>
             </div>
           </div>
         </div>
@@ -1023,6 +1029,89 @@
     </div>
   </div>
 
+  <!-- Modal 9: Sincronização em Nuvem Cloudflare -->
+  <div class="modal-overlay" id="modalCloudSync">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.25rem;">☁️</span>
+          <h3 class="modal-title">Sincronização em Nuvem (Cloudflare)</h3>
+        </div>
+        <button class="btn btn-icon btn-ghost" onclick="closeModal('modalCloudSync')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5;">
+          Mantenha seus lançamentos, extrato e amortizações extras sincronizados entre seu <b>computador, celular e tablet</b> em tempo real através do Cloudflare Pages.
+        </p>
+
+        <!-- Status Card -->
+        <div class="cloud-sync-status-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted);">Status da Nuvem:</span>
+            <div id="cloudModalStatusText">
+              <span class="badge-status-pill muted">○ Não configurado</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+            <span style="color: var(--text-muted);">Última sincronização:</span>
+            <b id="cloudModalLastSync">-</b>
+          </div>
+        </div>
+
+        <!-- PIN Input -->
+        <div class="input-field" style="margin-top: 1.25rem;">
+          <label class="input-label" for="cloudModalPin">
+            Chave de Acesso / PIN de Sincronização
+          </label>
+          <input type="password" id="cloudModalPin" class="input-control" placeholder="Digite uma senha pessoal (ex: 1234)" onchange="saveCloudSyncSettings()">
+          <small style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Use a mesma chave em todos os seus aparelhos para acessar os seus dados.
+          </small>
+        </div>
+
+        <!-- Auto Sync Checkbox -->
+        <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <input type="checkbox" id="cloudModalAutoSync" checked onchange="saveCloudSyncSettings()" style="cursor: pointer;">
+          <label for="cloudModalAutoSync" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+            Sincronizar automaticamente ao salvar amortizações ou parcelas
+          </label>
+        </div>
+
+        <!-- Manual Actions -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" onclick="triggerManualCloudPull()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Baixar da Nuvem
+          </button>
+          <button type="button" class="btn btn-primary" onclick="triggerManualCloudPush()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Enviar para Nuvem
+          </button>
+        </div>
+
+        <!-- Instructions Accordion / Help -->
+        <details style="margin-top: 1.25rem; background: var(--bg-card-subtle); padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.8rem; border: 1px solid var(--border-color);">
+          <summary style="cursor: pointer; font-weight: 700; color: var(--primary-600);">Como ativar o banco grátis no Cloudflare Pages (Passo a Passo)</summary>
+          <ol style="margin-top: 0.5rem; padding-left: 1.25rem; line-height: 1.6; color: var(--text-main);">
+            <li>Acesse o painel do <b>Cloudflare</b> e vá em <b>Storage & Databases &gt; KV</b>.</li>
+            <li>Clique em <b>Create Namespace</b> e crie com o nome <code>AMORT_KV</code>.</li>
+            <li>Vá no seu projeto em <b>Workers &amp; Pages &gt; (seu projeto) &gt; Settings &gt; Functions</b>.</li>
+            <li>Role até <b>KV namespace bindings</b>, clique em <b>Add binding</b> e preencha:
+              <ul>
+                <li>Variable name: <code>AMORT_KV</code></li>
+                <li>KV namespace: <code>AMORT_KV</code></li>
+              </ul>
+            </li>
+            <li>(Opcional para segurança): Em <b>Settings &gt; Environment variables</b>, adicione a variável <code>SYNC_PIN</code> com o seu PIN.</li>
+          </ol>
+        </details>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalCloudSync')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -1030,5 +1119,6 @@
   <script src="calculation-engine.js"></script>
   <script src="app.js"></script>
   <script src="real-ledger.js"></script>
+  <script src="cloud-sync.js"></script>
 </body>
 </html>

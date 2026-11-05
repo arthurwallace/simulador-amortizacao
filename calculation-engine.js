@@ -23,6 +23,7 @@
     root.CalculationEngine = engine;
     root.runLocalSimulation = engine.simulate;
     root.calcProRataForDate = engine.calcProRataForDate;
+    root.calcProRataFromTotalPaid = engine.calcProRataFromTotalPaid;
     if (!root.fmt) {
       root.fmt = engine.Formatters;
     }
@@ -216,6 +217,85 @@
       proRataInterest,
       monetaryCorrection,
       totalPaid,
+      baseDateStr
+    };
+  }
+
+  /**
+   * Cálculo inverso de amortização intra-mês a partir do Valor Efetivamente Pago (Desembolso Total).
+   *
+   * Quando o cliente realiza um pagamento extra no banco, o valor desembolsado é debitado integralmente.
+   * A partir do total pago, o banco desconta primeiro os encargos decorridos desde o último vencimento:
+   * 1. Juros Pró-rata: Principal * ((1 + i_mensal)^(d / 30) - 1)
+   * 2. Atualização TR: Principal * ((1 + TR_mensal)^(d / 30) - 1)
+   * 3. Total Desembolsado = Principal + Juros Pró-rata + TR
+   *
+   * Logo: Principal = Total Desembolsado / (1 + Fator_Juros + Fator_TR)
+   * E: Abatimento no Saldo = Total Desembolsado - Juros Pró-rata - TR
+   *
+   * @param {string} amortDateStr Data da amortização (YYYY-MM-DD)
+   * @param {number} totalPaid Valor total desembolsado / pago pelo cliente
+   * @param {number} customMonthlyRate Taxa mensal de juros (ex: 0.9631393)
+   * @param {number} customTrRate Taxa mensal estimada da TR (ex: 0.1719)
+   * @param {number} customCycleDay Dia base de vencimento mensal (padrão: 26)
+   * @returns {Object} { days, proRataInterest, monetaryCorrection, totalPaid, principalAmount, baseDateStr }
+   */
+  function calcProRataFromTotalPaid(amortDateStr, totalPaid, customMonthlyRate, customTrRate, customCycleDay = 26) {
+    const numTotal = Number(totalPaid) || 0;
+    if (!amortDateStr || numTotal <= 0) {
+      return { days: 0, proRataInterest: 0, monetaryCorrection: 0, totalPaid: 0, principalAmount: 0, baseDateStr: '-' };
+    }
+
+    const dAmort = new Date(amortDateStr + 'T00:00:00');
+    const monthlyRate = (customMonthlyRate !== undefined && customMonthlyRate !== null)
+      ? Number(customMonthlyRate)
+      : 0.9631393;
+
+    const cycleDay = Number(customCycleDay) || 26;
+    const year = dAmort.getFullYear();
+    const month = dAmort.getMonth();
+    const day = dAmort.getDate();
+
+    let baseDate = new Date(year, month, cycleDay);
+    if (day < cycleDay) {
+      baseDate = new Date(year, month - 1, cycleDay);
+    }
+
+    const diffMs = dAmort.getTime() - baseDate.getTime();
+    const days = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+    const baseDateStr = baseDate.toISOString().substring(0, 10);
+
+    if (days === 0) {
+      return {
+        days: 0,
+        proRataInterest: 0,
+        monetaryCorrection: 0,
+        totalPaid: numTotal,
+        principalAmount: numTotal,
+        baseDateStr
+      };
+    }
+
+    const iMonthly = monthlyRate / 100;
+    const factorInterest = Math.pow(1 + iMonthly, days / 30) - 1;
+
+    const trRate = (customTrRate !== undefined && customTrRate !== null) ? Number(customTrRate) : 0.1719;
+    const trMonthly = trRate / 100;
+    const factorTR = Math.pow(1 + trMonthly, days / 30) - 1;
+
+    const totalFactor = 1 + factorInterest + factorTR;
+    const estPrincipal = numTotal / totalFactor;
+
+    const proRataInterest = Math.round(estPrincipal * factorInterest * 100) / 100;
+    const monetaryCorrection = Math.round(estPrincipal * factorTR * 100) / 100;
+    const principalAmount = Math.max(0, Math.round((numTotal - proRataInterest - monetaryCorrection) * 100) / 100);
+
+    return {
+      days,
+      proRataInterest,
+      monetaryCorrection,
+      totalPaid: numTotal,
+      principalAmount,
       baseDateStr
     };
   }
@@ -489,6 +569,7 @@
     MortgageFormulas,
     Formatters,
     calcProRataForDate,
+    calcProRataFromTotalPaid,
     simulate,
     calculateSavings
   };

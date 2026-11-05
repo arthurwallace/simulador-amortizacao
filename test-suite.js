@@ -145,7 +145,20 @@ async function runTestSuite() {
   if (t17Days.days !== 17 || Math.abs(t17Days.proRataInterest - 15.42) > 0.5) {
     throw new Error('Falha no cálculo de 17 dias pró-rata');
   }
-  console.log('✅ Teste 1 passou com sucesso!\n');
+
+  // Teste 1.1: Cálculo Inverso a partir do Valor Efetivamente Pago (Desembolso Total)
+  console.log('--- Teste 1.1: Cálculo Inverso a partir do Total Desembolsado ---');
+  // 05/11/2026: 10 dias após 26/10/2026 com Desembolso Total de R$ 3.127,90
+  const tRev10 = (window.calcProRataFromTotalPaid || CalculationEngine.calcProRataFromTotalPaid)('2026-11-05', 3127.90);
+  console.log('05/11/2026 (10 dias): Desembolso =', tRev10.totalPaid, '| juros =', tRev10.proRataInterest, '| TR =', tRev10.monetaryCorrection, '| Abatimento Saldo =', tRev10.principalAmount);
+  if (tRev10.days !== 10) throw new Error('Falha nos dias do cálculo inverso');
+  if (Math.abs((tRev10.principalAmount + tRev10.proRataInterest + tRev10.monetaryCorrection) - 3127.90) > 0.01) {
+    throw new Error('Soma dos componentes diverge do total desembolsado');
+  }
+  if (tRev10.principalAmount < 3110 || tRev10.principalAmount > 3120) {
+    throw new Error('Valor do abatimento principal fora da faixa esperada');
+  }
+  console.log('✅ Teste 1 e 1.1 passaram com sucesso!\n');
 
   // Teste 2: Recálculo do Saldo Devedor e KPIs
   console.log('--- Teste 2: Recálculo do Saldo Devedor Real e KPIs ---');
